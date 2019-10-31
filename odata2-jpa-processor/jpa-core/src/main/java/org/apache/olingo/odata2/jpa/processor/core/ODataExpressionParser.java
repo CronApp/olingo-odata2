@@ -102,7 +102,7 @@ public class ODataExpressionParser {
     return parseToJPAWhereExpression(whereExpression, tableAlias, "?");
   }
 
-  private static boolean isEdmSimpleTypeKind(Class fieldClass) {
+  private static boolean isEdmComplexTypeKind(Class fieldClass) {
     try {
       JPATypeConverter.convertToEdmSimpleType(fieldClass, null);
       return false;
@@ -154,7 +154,7 @@ public class ODataExpressionParser {
       if (binaryExpression.getRightOperand().getEdmType() instanceof EdmNull) {
         try {
           Class clazz = ((JPAEdmMappingImpl) ((EdmSimplePropertyImplProv) ((PropertyExpressionImpl) binaryExpression.getLeftOperand()).getEdmProperty()).getMapping()).getJPAType();
-          boolean isComplex = isEdmSimpleTypeKind(clazz);
+          boolean isComplex = isEdmComplexTypeKind(clazz);
           if (isComplex) {
             left = left.substring(0, left.lastIndexOf("."));
           }
