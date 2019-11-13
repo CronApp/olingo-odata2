@@ -23,6 +23,7 @@ import org.apache.olingo.odata2.api.exception.ODataException;
 import org.apache.olingo.odata2.api.processor.ODataContext;
 import org.apache.olingo.odata2.api.processor.ODataSingleProcessor;
 import org.apache.olingo.odata2.api.rt.RuntimeDelegate;
+import org.apache.olingo.odata2.api.uri.UriInfo;
 
 /**
  * Creates instance of custom OData service.
@@ -84,7 +85,7 @@ public abstract class ODataServiceFactory {
     return null;
   }
 
-  public Exception handleException(Throwable throwable) {
+  public Exception handleException(Throwable throwable, UriInfo info) {
     return null;
   }
 

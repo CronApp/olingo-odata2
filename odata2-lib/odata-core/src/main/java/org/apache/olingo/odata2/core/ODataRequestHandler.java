@@ -157,7 +157,7 @@ public class ODataRequestHandler {
         e.printStackTrace();
       }
 
-      Exception newException = serviceFactory.handleException(e);
+      Exception newException = serviceFactory.handleException(e, uriInfo);
       if (newException != null) {
         exception = newException;
       } else {
