@@ -463,7 +463,7 @@ public class ODataRequestHandler {
         processorFeature == EntitySimplePropertyValueProcessor.class ? getSupportedContentTypes(getProperty(uriInfo))
             : getSupportedContentTypes(processorFeature);
 
-    if (!hasMatchingContentType(parsedContentType, supportedContentTypes)) {
+    if (!hasMatchingContentType(parsedContentType, supportedContentTypes) && !uriInfo.isValue()) {
       throw new ODataUnsupportedMediaTypeException(ODataUnsupportedMediaTypeException.NOT_SUPPORTED
           .addContent(parsedContentType));
     }
