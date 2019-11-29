@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
- * 
+ *
  * http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -21,6 +21,7 @@ package org.apache.olingo.odata2.core.ep.util;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.util.Queue;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -28,8 +29,6 @@ import java.util.concurrent.LinkedBlockingQueue;
 /**
  * Circular stream buffer to write/read into/from one single buffer.
  * With support of {@link InputStream} and {@link OutputStream} access to buffered data.
- * 
- * 
  */
 public class CircleStreamBuffer {
 
@@ -49,6 +48,24 @@ public class CircleStreamBuffer {
 
   private InternalInputStream inStream;
   private InternalOutputStream outStream;
+  private static Method clearMethod;
+
+  static {
+
+    for (Method m : ByteBuffer.class.getMethods()) {
+      if (m.getName().equalsIgnoreCase("clear")) {
+        clearMethod = m;
+      }
+    }
+
+    if (clearMethod == null) {
+      for (Method m : ByteBuffer.class.getDeclaredMethods()) {
+        if (m.getName().equalsIgnoreCase("clear")) {
+          clearMethod = m;
+        }
+      }
+    }
+  }
 
   /**
    * Creates a {@link CircleStreamBuffer} with default buffer size.
@@ -71,7 +88,7 @@ public class CircleStreamBuffer {
 
   /**
    * Get {@link InputStream} for data read access.
-   * 
+   *
    * @return the stream
    */
   public InputStream getInputStream() {
@@ -80,7 +97,7 @@ public class CircleStreamBuffer {
 
   /**
    * Get {@link OutputStream} for write data.
-   * 
+   *
    * @return the stream
    */
   public OutputStream getOutputStream() {
@@ -111,9 +128,11 @@ public class CircleStreamBuffer {
     ByteBuffer buffer = bufferQueue.poll();
     while (buffer != null) {
       try {
-        buffer.clear();
-      } catch(Exception e) {
-        //
+        if (clearMethod != null) {
+          clearMethod.invoke(buffer);
+        }
+      } catch (Throwable e) {
+        throw new RuntimeException(e);
       }
       buffer = bufferQueue.poll();
     }
@@ -238,7 +257,7 @@ public class CircleStreamBuffer {
    * Creates a new buffer (per {@link #allocateBuffer(int)}) with the requested capacity as minimum capacity, add the
    * new allocated
    * buffer to the {@link #bufferQueue} and set it as {@link #currentWriteBuffer}.
-   * 
+   *
    * @param requestedCapacity minimum capacity for new allocated buffer
    */
   private void createNewWriteBuffer(final int requestedCapacity) {
@@ -278,7 +297,7 @@ public class CircleStreamBuffer {
   // #############################################
 
   /**
-   * 
+   *
    */
   private static class InternalInputStream extends InputStream {
 
@@ -310,7 +329,7 @@ public class CircleStreamBuffer {
   }
 
   /**
-   * 
+   *
    */
   private static class InternalOutputStream extends OutputStream {
     private final CircleStreamBuffer outBuffer;
