@@ -182,6 +182,10 @@ public class JPAEntity {
       normalizeInlineEntries(oDataEntryProperties);
     }
     write(oDataEntryProperties, false);
+    //Removido código original do ODATApor:
+    //1- Performance
+    //2- Auto relacionamento não estava permitindo update, apenas insert
+    /*
     JPALink link = new JPALink(oDataJPAContext);
     link.setSourceJPAEntity(jpaEntity);
     try {
@@ -195,6 +199,7 @@ public class JPAEntity {
           .throwException(ODataJPARuntimeException.GENERAL
               .addContent(e.getMessage()), e);
     }
+    */
   }
 
   public void update(final Map<String, Object> oDataEntryProperties) throws ODataJPARuntimeException {
