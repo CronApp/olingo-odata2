@@ -229,17 +229,24 @@ public class JPAEntity {
 
   protected void setEmbeddableKeyProperty(final HashMap<String, String> embeddableKeys,
       final List<EdmProperty> oDataEntryKeyProperties,
-      final Map<String, Object> oDataEntryProperties, final Object entity)
+      final Map<String, Object> oDataEntryProperties, final Object entity, final boolean isCreate)
       throws ODataJPARuntimeException, EdmException, IllegalAccessException, IllegalArgumentException,
       InvocationTargetException, InstantiationException {
 
     HashMap<String, Object> embeddableObjMap = new HashMap<String, Object>();
     List<EdmProperty> leftODataEntryKeyProperties = new ArrayList<EdmProperty>();
     HashMap<String, String> leftEmbeddableKeys = new HashMap<String, String>();
+    final List<String> keyNames = oDataEntityType.getKeyPropertyNames();
 
     for (EdmProperty edmProperty : oDataEntryKeyProperties) {
       if (oDataEntryProperties.containsKey(edmProperty.getName()) == false) {
         continue;
+      }
+
+      if (isCreate == false) {
+        if (keyNames.contains(edmProperty.getName())) {
+          continue;
+        }
       }
 
       String edmPropertyName = edmProperty.getName();
@@ -337,7 +344,7 @@ public class JPAEntity {
       Set<String> propertyNames = null;
       if (embeddableKeys != null) {
         setEmbeddableKeyProperty(embeddableKeys, oDataEntityType.getKeyProperties(), oDataEntryProperties,
-            jpaEntity);
+            jpaEntity, isCreate);
 
         propertyNames = new HashSet<String>();
         propertyNames.addAll(oDataEntryProperties.keySet());
