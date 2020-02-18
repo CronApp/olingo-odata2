@@ -37,6 +37,7 @@ public class EntityType extends ComplexType {
   private Key key;
   private List<NavigationProperty> navigationProperties;
   private boolean showMetadata = true;
+  private String jpql = null;
 
   /**
    * @return <b>boolean</b> if this EntityType is a media resource
@@ -236,5 +237,13 @@ public class EntityType extends ComplexType {
 
   public void setShowMetadata(boolean showMetadata) {
     this.showMetadata = showMetadata;
+  }
+
+  public String getJpql() {
+    return jpql;
+  }
+
+  public void setJpql(String jpql) {
+    this.jpql = jpql;
   }
 }
