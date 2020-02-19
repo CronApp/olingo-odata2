@@ -70,7 +70,10 @@ public class EdmDouble extends AbstractSimpleType {
     String valueString = value;
     Double result = null;
     // Handle special values first.
-    if ("-INF".equals(value)) {
+    if (value != null && value.length() == 0) {
+      return null;
+    }
+    else if ("-INF".equals(value)) {
       result = Double.NEGATIVE_INFINITY;
     } else if ("INF".equals(value)) {
       result = Double.POSITIVE_INFINITY;
