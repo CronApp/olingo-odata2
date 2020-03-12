@@ -55,8 +55,13 @@ import org.apache.olingo.odata2.api.uri.expression.OrderExpression;
 import org.apache.olingo.odata2.api.uri.expression.PropertyExpression;
 import org.apache.olingo.odata2.api.uri.expression.SortOrder;
 import org.apache.olingo.odata2.api.uri.expression.UnaryExpression;
+import org.apache.olingo.odata2.core.edm.EdmNull;
+import org.apache.olingo.odata2.core.edm.provider.EdmSimplePropertyImplProv;
+import org.apache.olingo.odata2.core.uri.expression.PropertyExpressionImpl;
+import org.apache.olingo.odata2.jpa.processor.api.exception.ODataJPAModelException;
 import org.apache.olingo.odata2.jpa.processor.api.exception.ODataJPARuntimeException;
 import org.apache.olingo.odata2.jpa.processor.api.jpql.JPQLStatement;
+import org.apache.olingo.odata2.jpa.processor.core.access.model.JPATypeConverter;
 import org.apache.olingo.odata2.jpa.processor.core.model.JPAEdmMappingImpl;
 
 /**
@@ -97,6 +102,15 @@ public class ODataExpressionParser {
     return parseToJPAWhereExpression(whereExpression, tableAlias, "?");
   }
 
+  private static boolean isEdmComplexTypeKind(Class fieldClass) {
+    try {
+      JPATypeConverter.convertToEdmSimpleType(fieldClass, null);
+      return false;
+    } catch (ODataJPAModelException e) {
+      return true;
+    }
+  }
+
   public static String parseToJPAWhereExpression(final CommonExpression whereExpression, final String tableAlias, final String prefix)
       throws ODataException {
     switch (whereExpression.getKind()) {
@@ -133,9 +147,21 @@ public class ODataExpressionParser {
           methodFlag.set(1);
         }
       }
-      final String left = parseToJPAWhereExpression(binaryExpression.getLeftOperand(), tableAlias, prefix);
+      String left = parseToJPAWhereExpression(binaryExpression.getLeftOperand(), tableAlias, prefix);
       index.set(index.get()+1);
       final String right = parseToJPAWhereExpression(binaryExpression.getRightOperand(), tableAlias, prefix);
+
+      if (binaryExpression.getRightOperand().getEdmType() instanceof EdmNull) {
+        try {
+          Class clazz = ((JPAEdmMappingImpl) ((EdmSimplePropertyImplProv) ((PropertyExpressionImpl) binaryExpression.getLeftOperand()).getEdmProperty()).getMapping()).getJPAType();
+          boolean isComplex = isEdmComplexTypeKind(clazz);
+          if (isComplex) {
+            left = left.substring(0, left.lastIndexOf("."));
+          }
+        } catch (Exception e) {
+          //NoCommand
+        }
+      }
 
       // Special handling for STARTSWITH and ENDSWITH method expression
       if (operator != null && (operator == MethodOperator.STARTSWITH || operator == MethodOperator.ENDSWITH)) {

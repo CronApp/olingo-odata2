@@ -157,7 +157,7 @@ public class ODataRequestHandler {
         e.printStackTrace();
       }
 
-      Exception newException = serviceFactory.handleException(e);
+      Exception newException = serviceFactory.handleException(e, uriInfo);
       if (newException != null) {
         exception = newException;
       } else {
@@ -463,7 +463,7 @@ public class ODataRequestHandler {
         processorFeature == EntitySimplePropertyValueProcessor.class ? getSupportedContentTypes(getProperty(uriInfo))
             : getSupportedContentTypes(processorFeature);
 
-    if (!hasMatchingContentType(parsedContentType, supportedContentTypes)) {
+    if (!hasMatchingContentType(parsedContentType, supportedContentTypes) && !uriInfo.isValue()) {
       throw new ODataUnsupportedMediaTypeException(ODataUnsupportedMediaTypeException.NOT_SUPPORTED
           .addContent(parsedContentType));
     }

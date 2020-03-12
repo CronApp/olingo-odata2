@@ -169,4 +169,8 @@ public class EdmEntityTypeImplProv extends EdmStructuralTypeImplProv implements 
   public Map<String, NavigationProperty> getNavigationProperties() {
     return navigationProperties;
   }
+
+  public EntityType getEntityType() {
+    return entityType;
+  }
 }

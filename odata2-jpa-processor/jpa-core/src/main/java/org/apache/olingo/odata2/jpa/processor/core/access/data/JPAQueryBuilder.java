@@ -217,7 +217,7 @@ public class JPAQueryBuilder {
     JPQLContext jpqlContext = buildJPQLContext(contextType, uriParserResultView);
     JPQLStatement jpqlStatement = JPQLStatement.createBuilder(jpqlContext).build();
 
-    Query query = em.createQuery(normalizeMembers(em, jpqlStatement.toString()));
+    Query query = em.createQuery(jpqlStatement.toString());
     Map<String, Map<Integer, Object>> parameterizedMap = ODataParameterizedWhereExpressionUtil.
         getParameterizedQueryMap();
     if (parameterizedMap != null && parameterizedMap.size() > 0) {
