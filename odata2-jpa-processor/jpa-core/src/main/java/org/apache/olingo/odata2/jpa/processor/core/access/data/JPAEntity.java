@@ -93,6 +93,8 @@ public class JPAEntity {
   public JPAEntity getParentJPAEntity() {
     return parentJPAEntity;
   }
+  
+  //TesteBuild5
 
   public Object getJPAEntity() {
     return jpaEntity;
@@ -418,7 +420,7 @@ public class JPAEntity {
                             canContinue = f.getAnnotation(Id.class) != null;
                           }
                         } else {
-                          mget = ReflectionUtil.getMethod(o, "get" + p);
+                          mget = ReflectionUtil.getMethod(clazz, "get" + p);
                           clazz = mget.getReturnType();
                           current = mget.invoke(current);
                         }
