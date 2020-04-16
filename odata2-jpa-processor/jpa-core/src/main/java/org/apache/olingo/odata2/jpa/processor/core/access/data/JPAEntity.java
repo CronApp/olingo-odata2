@@ -93,6 +93,8 @@ public class JPAEntity {
   public JPAEntity getParentJPAEntity() {
     return parentJPAEntity;
   }
+  
+  //TesteBuild
 
   public Object getJPAEntity() {
     return jpaEntity;
