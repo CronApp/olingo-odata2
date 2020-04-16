@@ -18,16 +18,13 @@
  ******************************************************************************/
 package org.apache.olingo.odata2.jpa.processor.core.model;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Field;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 import javax.persistence.Column;
+import javax.persistence.Id;
 import javax.persistence.JoinColumn;
 import javax.persistence.JoinColumns;
 import javax.persistence.metamodel.Attribute;
@@ -78,6 +75,9 @@ public class JPAEdmProperty extends JPAEdmBaseViewImpl implements
   private boolean isBuildModeComplexType;
   private Map<String, Integer> associationCount;
   private ArrayList<String[]> joinColumnNames = null;
+  private List<SimpleProperty> joinProperties = null;
+  private int totaJoinColumns = 0;
+  private JPAEdmBuilder keyViewBuilder;
 
   public JPAEdmProperty(final JPAEdmSchemaView view) {
     super(view);
@@ -187,7 +187,7 @@ public class JPAEdmProperty extends JPAEdmBaseViewImpl implements
      */
     @Override
     public void build() throws ODataJPAModelException, ODataJPARuntimeException {
-      JPAEdmBuilder keyViewBuilder = null;
+      keyViewBuilder = null;
       properties = new ArrayList<Property>();
 
       List<Attribute<?, ?>> jpaAttributes = null;
@@ -313,11 +313,7 @@ public class JPAEdmProperty extends JPAEdmBaseViewImpl implements
           break;
         }
 
-        if ((attributeType == PersistentAttributeType.BASIC
-            || attributeType == PersistentAttributeType.MANY_TO_MANY
-            || attributeType == PersistentAttributeType.ONE_TO_MANY
-            || attributeType == PersistentAttributeType.ONE_TO_ONE
-            || attributeType == PersistentAttributeType.MANY_TO_ONE)
+        if ((attributeType == PersistentAttributeType.BASIC)
             && (currentAttribute instanceof SingularAttribute && ((SingularAttribute<?, ?>) currentAttribute).isId())) {
 
           if (keyView == null) {
@@ -351,6 +347,10 @@ public class JPAEdmProperty extends JPAEdmBaseViewImpl implements
       Facets facets = JPAEdmFacets.createAndSet(jpaAttribute, simpleProperty);
       if(isForeignKey) {
         facets.setNullable(joinColumn.nullable());
+        String path = joinColumnNames.get(joinColumnNames.size() - 1)[1];
+        if (totaJoinColumns > 1) {
+          simpleProperty.setName(simpleProperty.getName() + "_" + path.replace(".", "_"));
+        }
       }
 
       int total = 0;
@@ -377,6 +377,11 @@ public class JPAEdmProperty extends JPAEdmBaseViewImpl implements
 
       AnnotatedElement annotatedElement = (AnnotatedElement) jpaAttribute.getJavaMember();
       joinColumnNames = null;
+      totaJoinColumns = 0;
+      if (joinProperties == null) {
+        joinProperties = new LinkedList<SimpleProperty>();
+      }
+      joinProperties.clear();
       if (annotatedElement == null) {
         return;
       }
@@ -384,11 +389,13 @@ public class JPAEdmProperty extends JPAEdmBaseViewImpl implements
       if (joinColumn == null) {
         JoinColumns joinColumns = annotatedElement.getAnnotation(JoinColumns.class);
         if (joinColumns != null) {
+          totaJoinColumns = joinColumns.value().length;
           for (JoinColumn jc : joinColumns.value()) {
             buildForeignKey(jc, jpaAttribute);
           }
         }
       } else {
+        totaJoinColumns = 1;
         buildForeignKey(joinColumn, jpaAttribute);
       }
     }
@@ -428,17 +435,11 @@ public class JPAEdmProperty extends JPAEdmBaseViewImpl implements
           }
         }
       } else {
-        for (Attribute<?, ?> referencedAttribute : referencedEntityType.getAttributes()) {
-          AnnotatedElement annotatedElement2 = (AnnotatedElement) referencedAttribute.getJavaMember();
-          if (annotatedElement2 != null) {
-            String refColName = getReferenceColumnName(annotatedElement2, referencedAttribute);
-            if(refColName.equals((joinColumn.referencedColumnName()))) {
-              name[1] = refColName;
-              joinColumnNames.add(name);
-              currentRefAttribute = referencedAttribute;
-              break;
-            }
-          }
+        List<Attribute<?, ?>> refPath = findRef(referencedEntityType, joinColumn);
+        if (refPath.size() > 0) {
+          name[1] = toString(refPath);
+          joinColumnNames.add(name);
+          currentRefAttribute = refPath.get(refPath.size() - 1);
         }
       }
 
@@ -447,12 +448,85 @@ public class JPAEdmProperty extends JPAEdmBaseViewImpl implements
             .addContent(joinColumn.referencedColumnName() + " -> " + referencedEntityType.getName()), null);
       }
       currentSimpleProperty = new SimpleProperty();
-      properties.add(buildSimpleProperty(currentRefAttribute, currentSimpleProperty, joinColumn));
+      buildSimpleProperty(currentRefAttribute, currentSimpleProperty, joinColumn);
+      properties.add(currentSimpleProperty);
+      joinProperties.add(currentSimpleProperty);
       if(joinColumn.nullable()) {
         currentSimpleProperty.getFacets();
-
       }
 
+      AnnotatedElement annotatedElement = (AnnotatedElement) jpaAttribute.getJavaMember();
+      Annotation idAnnotation = annotatedElement.getAnnotation(Id.class);
+      if (idAnnotation != null) {
+        if (keyView == null) {
+          keyView = new JPAEdmKey(JPAEdmProperty.this);
+          keyViewBuilder = keyView.getBuilder();
+        }
+
+        if (keyViewBuilder != null) {
+          keyViewBuilder.build();
+        }
+      }
+
+    }
+
+    private String toString(List<Attribute<?, ?>> refPath) {
+      String path = "";
+      for (Attribute<?, ?> attr: refPath) {
+        if (!path.isEmpty()) {
+          path += ".";
+        }
+        path += attr.getName();
+      }
+
+      return path;
+    }
+
+    private List<Attribute<?, ?>> findRef(EntityType<?> referencedEntityType, JoinColumn joinColumn) {
+      List<Attribute<?, ?>> refPath = new LinkedList<Attribute<?, ?>>();
+      findPath(refPath, referencedEntityType, joinColumn.referencedColumnName());
+      return refPath;
+    }
+
+    private void findPath(List<Attribute<?, ?>> refPath, EntityType<?> referencedEntityType, String name) {
+
+      for (Attribute<?, ?> referencedAttribute : referencedEntityType.getAttributes()) {
+        AnnotatedElement annotatedElement2 = (AnnotatedElement) referencedAttribute.getJavaMember();
+        if (annotatedElement2 != null) {
+          String refColName = getReferenceColumnName(annotatedElement2, referencedAttribute);
+          if(refColName.equals((name))) {
+            refPath.add(referencedAttribute);
+            return;
+          }
+        }
+      }
+
+      for (Attribute<?, ?> referencedAttribute : referencedEntityType.getAttributes()) {
+
+        AnnotatedElement annotatedElement = (AnnotatedElement) referencedAttribute.getJavaMember();
+        if (annotatedElement == null) {
+          continue;
+        }
+
+        JoinColumn joinColumn = annotatedElement.getAnnotation(JoinColumn.class);
+        if (joinColumn == null) {
+          JoinColumns joinColumns = annotatedElement.getAnnotation(JoinColumns.class);
+          if (joinColumns != null) {
+            for (JoinColumn jc : joinColumns.value()) {
+              if (jc.name().equals(name)) {
+                refPath.add(referencedAttribute);
+                findPath(refPath, metaModel.entity(referencedAttribute.getJavaType()), jc.referencedColumnName());
+                break;
+              }
+            }
+          }
+        } else {
+          if (joinColumn.name().equals(name)) {
+            refPath.add(referencedAttribute);
+            findPath(refPath, metaModel.entity(referencedAttribute.getJavaType()), joinColumn.referencedColumnName());
+          }
+        }
+      }
     }
 
     private Attribute<?, ?> findField(final Set<?> jpaAttributes, String name) {
