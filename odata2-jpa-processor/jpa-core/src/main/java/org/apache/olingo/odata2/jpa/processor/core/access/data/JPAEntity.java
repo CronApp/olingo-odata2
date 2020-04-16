@@ -94,7 +94,7 @@ public class JPAEntity {
     return parentJPAEntity;
   }
   
-  //TesteBuild
+  //TesteBuild2
 
   public Object getJPAEntity() {
     return jpaEntity;
