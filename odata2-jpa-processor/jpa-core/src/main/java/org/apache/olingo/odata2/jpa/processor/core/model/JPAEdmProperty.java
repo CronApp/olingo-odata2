@@ -378,6 +378,7 @@ public class JPAEdmProperty extends JPAEdmBaseViewImpl implements
       AnnotatedElement annotatedElement = (AnnotatedElement) jpaAttribute.getJavaMember();
       joinColumnNames = null;
       totaJoinColumns = 0;
+      int joinColumnIndex = -1;
       if (joinProperties == null) {
         joinProperties = new LinkedList<SimpleProperty>();
       }
@@ -391,16 +392,18 @@ public class JPAEdmProperty extends JPAEdmBaseViewImpl implements
         if (joinColumns != null) {
           totaJoinColumns = joinColumns.value().length;
           for (JoinColumn jc : joinColumns.value()) {
-            buildForeignKey(jc, jpaAttribute);
+            joinColumnIndex++;
+            buildForeignKey(jc, jpaAttribute, joinColumnIndex);
           }
         }
       } else {
         totaJoinColumns = 1;
-        buildForeignKey(joinColumn, jpaAttribute);
+        joinColumnIndex++;
+        buildForeignKey(joinColumn, jpaAttribute, joinColumnIndex);
       }
     }
 
-    private void buildForeignKey(final JoinColumn joinColumn, final Attribute<?, ?> jpaAttribute)
+    private void buildForeignKey(final JoinColumn joinColumn, final Attribute<?, ?> jpaAttribute, int joinColumnIndex)
         throws ODataJPAModelException,
         ODataJPARuntimeException {
       joinColumnNames = joinColumnNames == null ? new ArrayList<String[]>() : joinColumnNames;
@@ -448,6 +451,8 @@ public class JPAEdmProperty extends JPAEdmBaseViewImpl implements
             .addContent(joinColumn.referencedColumnName() + " -> " + referencedEntityType.getName()), null);
       }
       currentSimpleProperty = new SimpleProperty();
+      currentSimpleProperty.setOriginalName(jpaAttribute.getName());
+      currentSimpleProperty.setIndex(joinColumnIndex);
       buildSimpleProperty(currentRefAttribute, currentSimpleProperty, joinColumn);
       properties.add(currentSimpleProperty);
       joinProperties.add(currentSimpleProperty);
