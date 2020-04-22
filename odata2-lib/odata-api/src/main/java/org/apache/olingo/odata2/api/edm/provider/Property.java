@@ -29,6 +29,8 @@ import org.apache.olingo.odata2.api.edm.EdmFacets;
 public abstract class Property {
 
   private String name;
+  private String originalName;
+  private int index = 0;
   private EdmFacets facets;
   private CustomizableFeedMappings customizableFeedMappings;
   private String mimeType;
@@ -171,5 +173,21 @@ public abstract class Property {
   public Property setAnnotationElements(final List<AnnotationElement> annotationElements) {
     this.annotationElements = annotationElements;
     return this;
+  }
+
+  public String getOriginalName() {
+    return originalName;
+  }
+
+  public void setOriginalName(String originalName) {
+    this.originalName = originalName;
+  }
+
+  public int getIndex() {
+    return index;
+  }
+
+  public void setIndex(int index) {
+    this.index = index;
   }
 }
