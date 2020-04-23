@@ -31,20 +31,14 @@ import javax.persistence.Id;
 import javax.xml.bind.annotation.adapters.XmlAdapter;
 import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
 
-import org.apache.olingo.odata2.api.edm.EdmEntitySet;
-import org.apache.olingo.odata2.api.edm.EdmEntityType;
-import org.apache.olingo.odata2.api.edm.EdmException;
-import org.apache.olingo.odata2.api.edm.EdmNavigationProperty;
-import org.apache.olingo.odata2.api.edm.EdmProperty;
-import org.apache.olingo.odata2.api.edm.EdmSimpleType;
-import org.apache.olingo.odata2.api.edm.EdmStructuralType;
-import org.apache.olingo.odata2.api.edm.EdmTypeKind;
-import org.apache.olingo.odata2.api.edm.EdmTyped;
-import org.apache.olingo.odata2.api.edm.EdmType;
+import org.apache.olingo.odata2.api.edm.*;
 import org.apache.olingo.odata2.api.ep.entry.EntryMetadata;
 import org.apache.olingo.odata2.api.ep.entry.ODataEntry;
 import org.apache.olingo.odata2.api.ep.feed.ODataFeed;
+import org.apache.olingo.odata2.api.uri.KeyPredicate;
+import org.apache.olingo.odata2.core.edm.AbstractSimpleType;
 import org.apache.olingo.odata2.core.edm.provider.EdmSimplePropertyImplProv;
+import org.apache.olingo.odata2.core.uri.KeyPredicateImpl;
 import org.apache.olingo.odata2.jpa.processor.api.ODataJPAContext;
 import org.apache.olingo.odata2.jpa.processor.api.OnJPAWriteContent;
 import org.apache.olingo.odata2.jpa.processor.api.exception.ODataJPAModelException;
@@ -376,10 +370,25 @@ public class JPAEntity {
               continue;
             }
           }
-          accessModifier = accessModifiersWrite.get(propertyName);
           EdmProperty edmProperty = (EdmProperty)oDataEntityType.getProperty(propertyName);
           boolean isNullable = edmProperty.getFacets() == null ? (keyNames.contains(propertyName)? false : true)
               : edmProperty.getFacets().isNullable() == null ? true : edmProperty.getFacets().isNullable();
+          if (((EdmSimplePropertyImplProv) edmProperty).getComposite() != null) {
+            Map<String, Object> oDataEntryPropertiesComposite = new LinkedHashMap<String, Object>();
+            String value = (String) oDataEntryProperties.get(propertyName);
+            String[] values = value.split("~");
+            int i = 0;
+            for (EdmProperty p: ((EdmSimplePropertyImplProv)edmProperty).getComposite()) {
+              if (i < values.length) {
+                Object valueObj = ((AbstractSimpleType) p.getType()).valueOfString(values[i], EdmLiteralKind.JSON, p.getFacets(), ((JPAEdmMappingImpl) p.getMapping()).getOriginaType());
+                oDataEntryPropertiesComposite.put(p.getName(), valueObj);
+                setEntityValue(oDataEntryPropertiesComposite, created, p.getName(), p, null, isNullable);
+              }
+              i++;
+            }
+            continue;
+          }
+          accessModifier = accessModifiersWrite.get(propertyName);
           if (isVirtual || accessModifier == null) {
             try {
               setProperty(accessModifier, jpaEntity, oDataEntryProperties.get(propertyName), (EdmSimpleType) edmTyped
@@ -389,99 +398,7 @@ public class JPAEntity {
                 setProperty(accessModifier, jpaEntity, oDataEntryProperties.get(propertyName), (EdmSimpleType) edmTyped
                     .getType(), isNullable);
               } catch(Exception e3) {
-                JPAEdmMappingImpl mapping = ((JPAEdmMappingImpl) ((EdmSimplePropertyImplProv) edmTyped).getMapping());
-
-                String expression = mapping.getInternalExpression();
-                int start = 1;
-                if (expression == null && accessModifier == null) {
-                  expression = mapping.getInternalName();
-                  start = 0;
-                }
-
-                if (expression != null) {
-                  try {
-                    Object o = jpaEntity;
-                    Object current = o;
-                    Object lastObject = o;
-                    Method lastSet = null;
-                    Method mget = null;
-                    Method mset = null;
-                    String[] parts = expression.split("\\.");
-
-                    boolean canContinue = true;
-                    if (parts.length > 1) {
-                      Class clazz = jpaEntity.getClass();
-                      for (int i = start; i < parts.length; i++) {
-                        String p = parts[i];
-
-                        if (i == parts.length - 1) {
-                          Field f = ReflectionUtil.getField(clazz, p);
-                          if (f != null) {
-                            canContinue = f.getAnnotation(Id.class) != null;
-                          }
-                        } else {
-                          mget = ReflectionUtil.getMethod(clazz, "get" + p);
-                          clazz = mget.getReturnType();
-                          current = mget.invoke(current);
-                        }
-                      }
-                    }
-
-                    if (canContinue) {
-                      String path = "";
-                      mset = null;
-                      boolean hasObject = false;
-                      for (int i = start; i < parts.length; i++) {
-                        String p = parts[i];
-
-                        if (!path.isEmpty()) {
-                          path += ".";
-                        }
-
-                        path += p;
-
-                        lastSet = mset;
-
-                        mget = ReflectionUtil.getMethod(o, "get" + p);
-                        mset = ReflectionUtil.getMethod(o, "set" + p);
-
-                        if (i < parts.length - 1) {
-                          lastObject = o;
-                          Object value = mget.invoke(o);
-
-                          if (value == null || (value != null && !created.containsKey(path))) {
-                            value = mget.getReturnType().newInstance();
-                            mset.invoke(o, value);
-                            created.put(path, value);
-                          }
-
-                          o = value;
-                          hasObject = true;
-                        }
-
-                        if (i == parts.length - 1) {
-                          Field f = ReflectionUtil.getField(o, p);
-                          if (oDataEntryProperties.get(propertyName) == null && f.getAnnotation(Id.class) != null && lastSet != null) {
-                            setProperty(lastSet, lastObject, null, (EdmSimpleType) edmTyped
-                                .getType(), isNullable);
-                          } else {
-                            if (hasObject && f.getAnnotation(Id.class) == null) {
-                              continue;
-                            } else {
-                              setProperty(mset, o, oDataEntryProperties.get(propertyName), (EdmSimpleType) edmTyped
-                                  .getType(), isNullable);
-                            }
-                          }
-                        }
-                      }
-                    }
-                  } catch(Exception e1) {
-
-                  }
-                }
-
-
-                //
+                setEntityValue(oDataEntryProperties, created, propertyName, edmTyped, accessModifier, isNullable);
               }
             }
           } else {
@@ -544,6 +461,102 @@ public class JPAEntity {
           .throwException(ODataJPARuntimeException.GENERAL
               .addContent(e.getMessage()), e);
     }
+  }
+
+  private void setEntityValue(Map<String, Object> oDataEntryProperties, Map<String, Object> created, String propertyName, EdmTyped edmTyped, Method accessModifier, boolean isNullable) throws EdmException {
+    JPAEdmMappingImpl mapping = ((JPAEdmMappingImpl) ((EdmSimplePropertyImplProv) edmTyped).getMapping());
+
+    String expression = mapping.getInternalExpression();
+    int start = 1;
+    if (expression == null && accessModifier == null) {
+      expression = mapping.getInternalName();
+      start = 0;
+    }
+
+    if (expression != null) {
+      try {
+        Object o = jpaEntity;
+        Object current = o;
+        Object lastObject = o;
+        Method lastSet = null;
+        Method mget = null;
+        Method mset = null;
+        String[] parts = expression.split("\\.");
+
+        boolean canContinue = true;
+        if (parts.length > 1) {
+          Class clazz = jpaEntity.getClass();
+          for (int i = start; i < parts.length; i++) {
+            String p = parts[i];
+
+            if (i == parts.length - 1) {
+              Field f = ReflectionUtil.getField(clazz, p);
+              if (f != null) {
+                canContinue = f.getAnnotation(Id.class) != null;
+              }
+            } else {
+              mget = ReflectionUtil.getMethod(clazz, "get" + p);
+              clazz = mget.getReturnType();
+              current = mget.invoke(current);
+            }
+          }
+        }
+
+        if (canContinue) {
+          String path = "";
+          mset = null;
+          boolean hasObject = false;
+          for (int i = start; i < parts.length; i++) {
+            String p = parts[i];
+
+            if (!path.isEmpty()) {
+              path += ".";
+            }
+
+            path += p;
+
+            lastSet = mset;
+
+            mget = ReflectionUtil.getMethod(o, "get" + p);
+            mset = ReflectionUtil.getMethod(o, "set" + p);
+
+            if (i < parts.length - 1) {
+              lastObject = o;
+              Object value = mget.invoke(o);
+
+              if (value == null || (value != null && !created.containsKey(path))) {
+                value = mget.getReturnType().newInstance();
+                mset.invoke(o, value);
+                created.put(path, value);
+              }
+
+              o = value;
+              hasObject = true;
+            }
+
+            if (i == parts.length - 1) {
+              Field f = ReflectionUtil.getField(o, p);
+              if (oDataEntryProperties.get(propertyName) == null && f.getAnnotation(Id.class) != null && lastSet != null) {
+                setProperty(lastSet, lastObject, null, (EdmSimpleType) edmTyped
+                    .getType(), isNullable);
+              } else {
+                if (hasObject && f.getAnnotation(Id.class) == null) {
+                  continue;
+                } else {
+                  setProperty(mset, o, oDataEntryProperties.get(propertyName), (EdmSimpleType) edmTyped
+                      .getType(), isNullable);
+                }
+              }
+            }
+          }
+        }
+      } catch(Exception e1) {
+
+      }
+    }
+
+
+    //
   }
 
   @SuppressWarnings("unchecked")

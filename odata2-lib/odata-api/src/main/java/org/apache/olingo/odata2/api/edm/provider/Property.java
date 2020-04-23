@@ -18,6 +18,7 @@
  ******************************************************************************/
 package org.apache.olingo.odata2.api.edm.provider;
 
+import java.util.LinkedList;
 import java.util.List;
 
 import org.apache.olingo.odata2.api.edm.EdmFacets;
@@ -38,6 +39,7 @@ public abstract class Property {
   private Documentation documentation;
   private List<AnnotationAttribute> annotationAttributes;
   private List<AnnotationElement> annotationElements;
+  private List<Property> composite;
 
   /**
    * @return <b>String</b> name of this property
@@ -189,5 +191,16 @@ public abstract class Property {
 
   public void setIndex(int index) {
     this.index = index;
+  }
+
+  public void addComposite(Property property) {
+    if (this.composite == null) {
+      this.composite = new LinkedList<Property>();
+    }
+    this.composite.add(property);
+  }
+
+  public List<Property> getComposite() {
+    return this.composite;
   }
 }

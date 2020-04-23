@@ -313,7 +313,11 @@ public class JPAEdmProperty extends JPAEdmBaseViewImpl implements
           break;
         }
 
-        if ((attributeType == PersistentAttributeType.BASIC)
+        if ((attributeType == PersistentAttributeType.BASIC
+            || attributeType == PersistentAttributeType.MANY_TO_MANY
+            || attributeType == PersistentAttributeType.ONE_TO_MANY
+            || attributeType == PersistentAttributeType.ONE_TO_ONE
+            || attributeType == PersistentAttributeType.MANY_TO_ONE)
             && (currentAttribute instanceof SingularAttribute && ((SingularAttribute<?, ?>) currentAttribute).isId())) {
 
           if (keyView == null) {
@@ -391,9 +395,26 @@ public class JPAEdmProperty extends JPAEdmBaseViewImpl implements
         JoinColumns joinColumns = annotatedElement.getAnnotation(JoinColumns.class);
         if (joinColumns != null) {
           totaJoinColumns = joinColumns.value().length;
+          SimpleProperty compositeProperty = null;
+          if (joinColumns.value().length > 1) {
+            compositeProperty = new SimpleProperty();
+            currentSimpleProperty = compositeProperty;
+            JPAEdmNameBuilder.build(JPAEdmProperty.this, false, true, false);
+            EdmSimpleTypeKind simpleTypeKind = JPATypeConverter
+                .convertToEdmSimpleType(String.class, jpaAttribute);
+            compositeProperty.setType(simpleTypeKind);
+            Facets facets = JPAEdmFacets.createAndSet(jpaAttribute, compositeProperty);
+            compositeProperty.setName(jpaAttribute.getName());
+            ((JPAEdmMappingImpl) compositeProperty.getMapping()).setJPAType(String.class);
+            properties.add(compositeProperty);
+          }
           for (JoinColumn jc : joinColumns.value()) {
             joinColumnIndex++;
-            buildForeignKey(jc, jpaAttribute, joinColumnIndex);
+            SimpleProperty p = buildForeignKey(jc, jpaAttribute, joinColumnIndex);
+            if (compositeProperty != null) {
+              compositeProperty.addComposite(p);
+              currentSimpleProperty = compositeProperty;
+            }
           }
         }
       } else {
@@ -403,7 +424,7 @@ public class JPAEdmProperty extends JPAEdmBaseViewImpl implements
       }
     }
 
-    private void buildForeignKey(final JoinColumn joinColumn, final Attribute<?, ?> jpaAttribute, int joinColumnIndex)
+    private SimpleProperty buildForeignKey(final JoinColumn joinColumn, final Attribute<?, ?> jpaAttribute, int joinColumnIndex)
         throws ODataJPAModelException,
         ODataJPARuntimeException {
       joinColumnNames = joinColumnNames == null ? new ArrayList<String[]>() : joinColumnNames;
@@ -454,25 +475,8 @@ public class JPAEdmProperty extends JPAEdmBaseViewImpl implements
       currentSimpleProperty.setOriginalName(jpaAttribute.getName());
       currentSimpleProperty.setIndex(joinColumnIndex);
       buildSimpleProperty(currentRefAttribute, currentSimpleProperty, joinColumn);
-      properties.add(currentSimpleProperty);
-      joinProperties.add(currentSimpleProperty);
-      if(joinColumn.nullable()) {
-        currentSimpleProperty.getFacets();
-      }
 
-      AnnotatedElement annotatedElement = (AnnotatedElement) jpaAttribute.getJavaMember();
-      Annotation idAnnotation = annotatedElement.getAnnotation(Id.class);
-      if (idAnnotation != null) {
-        if (keyView == null) {
-          keyView = new JPAEdmKey(JPAEdmProperty.this);
-          keyViewBuilder = keyView.getBuilder();
-        }
-
-        if (keyViewBuilder != null) {
-          keyViewBuilder.build();
-        }
-      }
-
+      return  currentSimpleProperty;
     }
 
     private String toString(List<Attribute<?, ?>> refPath) {

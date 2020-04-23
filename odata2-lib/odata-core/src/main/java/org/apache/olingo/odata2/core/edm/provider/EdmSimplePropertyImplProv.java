@@ -19,17 +19,29 @@
 package org.apache.olingo.odata2.core.edm.provider;
 
 import org.apache.olingo.odata2.api.edm.EdmException;
+import org.apache.olingo.odata2.api.edm.EdmProperty;
 import org.apache.olingo.odata2.api.edm.EdmType;
+import org.apache.olingo.odata2.api.edm.provider.Property;
 import org.apache.olingo.odata2.api.edm.provider.SimpleProperty;
 import org.apache.olingo.odata2.core.edm.EdmSimpleTypeFacadeImpl;
+
+import java.util.LinkedList;
+import java.util.List;
 
 public class EdmSimplePropertyImplProv extends EdmPropertyImplProv {
 
   private SimpleProperty property;
+  private List<EdmProperty> composite;
 
   public EdmSimplePropertyImplProv(final EdmImplProv edm, final SimpleProperty property) throws EdmException {
     super(edm, property.getType().getFullQualifiedName(), property);
     this.property = property;
+    if (this.property.getComposite() != null) {
+      composite = new LinkedList<EdmProperty>();
+      for (Property p: this.property.getComposite()) {
+        composite.add(new EdmSimplePropertyImplProv(edm, (SimpleProperty) p));
+      }
+    }
   }
 
   @Override
@@ -46,5 +58,9 @@ public class EdmSimplePropertyImplProv extends EdmPropertyImplProv {
   @Override
   public boolean isSimple() {
     return true;
+  }
+
+  public List<EdmProperty> getComposite() {
+    return this.composite;
   }
 }

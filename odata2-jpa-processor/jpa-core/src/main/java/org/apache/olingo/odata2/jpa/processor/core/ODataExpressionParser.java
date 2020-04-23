@@ -21,12 +21,7 @@ package org.apache.olingo.odata2.jpa.processor.core;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.sql.Time;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import org.apache.olingo.odata2.api.edm.EdmException;
 import org.apache.olingo.odata2.api.edm.EdmLiteral;
@@ -57,6 +52,9 @@ import org.apache.olingo.odata2.api.uri.expression.SortOrder;
 import org.apache.olingo.odata2.api.uri.expression.UnaryExpression;
 import org.apache.olingo.odata2.core.edm.EdmNull;
 import org.apache.olingo.odata2.core.edm.provider.EdmSimplePropertyImplProv;
+import org.apache.olingo.odata2.core.uri.KeyPredicateImpl;
+import org.apache.olingo.odata2.core.uri.expression.FilterParserImpl;
+import org.apache.olingo.odata2.core.uri.expression.LiteralExpressionImpl;
 import org.apache.olingo.odata2.core.uri.expression.PropertyExpressionImpl;
 import org.apache.olingo.odata2.jpa.processor.api.exception.ODataJPAModelException;
 import org.apache.olingo.odata2.jpa.processor.api.exception.ODataJPARuntimeException;
@@ -102,12 +100,120 @@ public class ODataExpressionParser {
     return parseToJPAWhereExpression(whereExpression, tableAlias, "?");
   }
 
+  public static String unquote(String str) {
+    if (str.length() >= 2 && (str.startsWith("\"") || str.startsWith("'")) && (str.endsWith("\"") || str.endsWith("'"))) {
+      return str.substring(1, str.length() - 1);
+    }
+
+    return str;
+  }
+
   private static boolean isEdmComplexTypeKind(Class fieldClass) {
     try {
       JPATypeConverter.convertToEdmSimpleType(fieldClass, null);
       return false;
     } catch (ODataJPAModelException e) {
       return true;
+    }
+  }
+
+  private static String parseBinary(BinaryOperator binaryOperator, CommonExpression leftOperand, CommonExpression rightOperand, final String tableAlias, final String prefix) throws ODataException {
+    MethodOperator operator = null;
+    if (leftOperand.getKind() == ExpressionKind.METHOD) {
+      operator = ((MethodExpression) leftOperand).getMethod();
+    }
+    if (operator != null && ((binaryOperator == BinaryOperator.EQ) ||
+        (binaryOperator == BinaryOperator.NE))) {
+      if (operator == MethodOperator.SUBSTRINGOF) {
+        methodFlag.set(1);
+      }
+    }
+
+    String left = parseToJPAWhereExpression(leftOperand, tableAlias, prefix);
+    index.set(index.get()+1);
+    final String right = parseToJPAWhereExpression(rightOperand, tableAlias, prefix);
+
+    if (rightOperand.getEdmType() instanceof EdmNull) {
+      try {
+        Class clazz = ((JPAEdmMappingImpl) ((EdmSimplePropertyImplProv) ((PropertyExpressionImpl) leftOperand).getEdmProperty()).getMapping()).getJPAType();
+        boolean isComplex = isEdmComplexTypeKind(clazz);
+        if (isComplex) {
+          left = left.substring(0, left.lastIndexOf("."));
+        }
+      } catch (Exception e) {
+        //NoCommand
+      }
+    }
+
+    // Special handling for STARTSWITH and ENDSWITH method expression
+    if (operator != null && (operator == MethodOperator.STARTSWITH || operator == MethodOperator.ENDSWITH)) {
+      if (!binaryOperator.equals(BinaryOperator.EQ) &&
+          !(rightOperand instanceof LiteralExpression) &&
+          ("true".equals(right) || "false".equals(right))) {
+        reInitializePositionalParameters();
+        throw ODataJPARuntimeException.throwException(ODataJPARuntimeException.OPERATOR_EQ_NE_MISSING
+            .addContent(binaryOperator.toString()), null);
+      } else if (binaryOperator.equals(BinaryOperator.EQ)) {
+        if ("false".equals(right)) {
+          return JPQLStatement.DELIMITER.PARENTHESIS_LEFT + left.replaceFirst("LIKE", "NOT LIKE")
+              + JPQLStatement.DELIMITER.SPACE
+              + JPQLStatement.DELIMITER.PARENTHESIS_RIGHT;
+        } else if ("true".equals(right)){
+          return JPQLStatement.DELIMITER.PARENTHESIS_LEFT + left
+              + JPQLStatement.DELIMITER.SPACE
+              + JPQLStatement.DELIMITER.PARENTHESIS_RIGHT;
+        }
+      }
+    }
+    switch (binaryOperator) {
+      case AND:
+        return JPQLStatement.DELIMITER.PARENTHESIS_LEFT + left + JPQLStatement.DELIMITER.SPACE
+            + JPQLStatement.Operator.AND + JPQLStatement.DELIMITER.SPACE
+            + right + JPQLStatement.DELIMITER.PARENTHESIS_RIGHT;
+      case OR:
+        return JPQLStatement.DELIMITER.PARENTHESIS_LEFT + left + JPQLStatement.DELIMITER.SPACE
+            + JPQLStatement.Operator.OR + JPQLStatement.DELIMITER.SPACE + right
+            + JPQLStatement.DELIMITER.PARENTHESIS_RIGHT;
+      case EQ:
+        EdmSimpleType type = (EdmSimpleType)leftOperand.getEdmType();
+        if(EdmSimpleTypeKind.String.getEdmSimpleTypeInstance().isCompatible(type)){
+          return JPQLStatement.DELIMITER.PARENTHESIS_LEFT + left + JPQLStatement.DELIMITER.SPACE
+              + (!"null".equals(right) ? JPQLStatement.Operator.LIKE : "IS") + JPQLStatement.DELIMITER.SPACE + right
+              + ("null".equals(right) ? "" : " ESCAPE '\\'") + JPQLStatement.DELIMITER.PARENTHESIS_RIGHT;
+        }
+        return JPQLStatement.DELIMITER.PARENTHESIS_LEFT + left + JPQLStatement.DELIMITER.SPACE
+            + (!"null".equals(right) ? JPQLStatement.Operator.EQ : "IS") + JPQLStatement.DELIMITER.SPACE + right
+            + JPQLStatement.DELIMITER.PARENTHESIS_RIGHT;
+      case NE:
+        return JPQLStatement.DELIMITER.PARENTHESIS_LEFT + left + JPQLStatement.DELIMITER.SPACE
+            + (!"null".equals(right) ?
+            JPQLStatement.Operator.NE :
+            "IS" + JPQLStatement.DELIMITER.SPACE + JPQLStatement.Operator.NOT)
+            + JPQLStatement.DELIMITER.SPACE + right
+            + JPQLStatement.DELIMITER.PARENTHESIS_RIGHT;
+      case LT:
+        return JPQLStatement.DELIMITER.PARENTHESIS_LEFT + left + JPQLStatement.DELIMITER.SPACE
+            + JPQLStatement.Operator.LT + JPQLStatement.DELIMITER.SPACE + right
+            + JPQLStatement.DELIMITER.PARENTHESIS_RIGHT;
+      case LE:
+        return JPQLStatement.DELIMITER.PARENTHESIS_LEFT + left + JPQLStatement.DELIMITER.SPACE
+            + JPQLStatement.Operator.LE + JPQLStatement.DELIMITER.SPACE + right
+            + JPQLStatement.DELIMITER.PARENTHESIS_RIGHT;
+      case GT:
+        return JPQLStatement.DELIMITER.PARENTHESIS_LEFT + left + JPQLStatement.DELIMITER.SPACE
+            + JPQLStatement.Operator.GT + JPQLStatement.DELIMITER.SPACE + right
+            + JPQLStatement.DELIMITER.PARENTHESIS_RIGHT;
+      case GE:
+        return JPQLStatement.DELIMITER.PARENTHESIS_LEFT + left + JPQLStatement.DELIMITER.SPACE
+            + JPQLStatement.Operator.GE + JPQLStatement.DELIMITER.SPACE + right
+            + JPQLStatement.DELIMITER.PARENTHESIS_RIGHT;
+      case PROPERTY_ACCESS:
+        reInitializePositionalParameters();
+        throw new ODataNotImplementedException();
+      default:
+        reInitializePositionalParameters();
+        throw new ODataNotImplementedException();
+
     }
   }
 
@@ -137,102 +243,40 @@ public class ODataExpressionParser {
       return parseToJPAWhereExpression(((FilterExpression) whereExpression).getExpression(), tableAlias, prefix);
     case BINARY:
       final BinaryExpression binaryExpression = (BinaryExpression) whereExpression;
-      MethodOperator operator = null;
-      if (binaryExpression.getLeftOperand().getKind() == ExpressionKind.METHOD) {
-        operator = ((MethodExpression) binaryExpression.getLeftOperand()).getMethod();
-      }
-      if (operator != null && ((binaryExpression.getOperator() == BinaryOperator.EQ) ||
-          (binaryExpression.getOperator() == BinaryOperator.NE))) {
-        if (operator == MethodOperator.SUBSTRINGOF) {
-          methodFlag.set(1);
-        }
-      }
-      String left = parseToJPAWhereExpression(binaryExpression.getLeftOperand(), tableAlias, prefix);
-      index.set(index.get()+1);
-      final String right = parseToJPAWhereExpression(binaryExpression.getRightOperand(), tableAlias, prefix);
 
-      if (binaryExpression.getRightOperand().getEdmType() instanceof EdmNull) {
-        try {
-          Class clazz = ((JPAEdmMappingImpl) ((EdmSimplePropertyImplProv) ((PropertyExpressionImpl) binaryExpression.getLeftOperand()).getEdmProperty()).getMapping()).getJPAType();
-          boolean isComplex = isEdmComplexTypeKind(clazz);
-          if (isComplex) {
-            left = left.substring(0, left.lastIndexOf("."));
+      if (binaryExpression.getLeftOperand() instanceof PropertyExpressionImpl) {
+        EdmSimplePropertyImplProv edmProp = ((EdmSimplePropertyImplProv) ((PropertyExpressionImpl) binaryExpression.getLeftOperand()).getEdmProperty());
+        if (edmProp.getComposite() != null) {
+
+          FilterParserImpl filterParser = new FilterParserImpl(null);
+          String expression = "(";
+          String[] values = unquote(binaryExpression.getRightOperand().getUriLiteral()).split("~");
+          int i = 0;
+          for (EdmProperty p: edmProp.getComposite()) {
+            if (i < values.length) {
+              PropertyExpressionImpl left = new PropertyExpressionImpl(values[i], null);
+              left.setEdmProperty(p);
+              left.setEdmType(p.getType());
+              if (expression.length() > 1) {
+                expression += " AND ";
+              }
+
+              LiteralExpressionImpl literal = (LiteralExpressionImpl)  filterParser.parseFilterString("'"+values[i]+"'").getExpression();
+              expression += parseBinary(binaryExpression.getOperator(), left, literal, tableAlias, prefix);
+            }
+            i++;
           }
-        } catch (Exception e) {
-          //NoCommand
+
+          expression += ")";
+
+          return expression;
         }
       }
 
-      // Special handling for STARTSWITH and ENDSWITH method expression
-      if (operator != null && (operator == MethodOperator.STARTSWITH || operator == MethodOperator.ENDSWITH)) {
-        if (!binaryExpression.getOperator().equals(BinaryOperator.EQ) && 
-            !(binaryExpression.getRightOperand() instanceof LiteralExpression) && 
-            ("true".equals(right) || "false".equals(right))) {
-          reInitializePositionalParameters();
-          throw ODataJPARuntimeException.throwException(ODataJPARuntimeException.OPERATOR_EQ_NE_MISSING
-              .addContent(binaryExpression.getOperator().toString()), null);
-        } else if (binaryExpression.getOperator().equals(BinaryOperator.EQ)) {
-          if ("false".equals(right)) {
-            return JPQLStatement.DELIMITER.PARENTHESIS_LEFT + left.replaceFirst("LIKE", "NOT LIKE")
-                + JPQLStatement.DELIMITER.SPACE
-                + JPQLStatement.DELIMITER.PARENTHESIS_RIGHT;
-          } else if ("true".equals(right)){
-            return JPQLStatement.DELIMITER.PARENTHESIS_LEFT + left
-                + JPQLStatement.DELIMITER.SPACE
-                + JPQLStatement.DELIMITER.PARENTHESIS_RIGHT;
-          }
-        } 
-      }
-      switch (binaryExpression.getOperator()) {
-      case AND:
-        return JPQLStatement.DELIMITER.PARENTHESIS_LEFT + left + JPQLStatement.DELIMITER.SPACE
-            + JPQLStatement.Operator.AND + JPQLStatement.DELIMITER.SPACE
-            + right + JPQLStatement.DELIMITER.PARENTHESIS_RIGHT;
-      case OR:
-        return JPQLStatement.DELIMITER.PARENTHESIS_LEFT + left + JPQLStatement.DELIMITER.SPACE
-            + JPQLStatement.Operator.OR + JPQLStatement.DELIMITER.SPACE + right
-            + JPQLStatement.DELIMITER.PARENTHESIS_RIGHT;
-      case EQ:
-        EdmSimpleType type = (EdmSimpleType)((BinaryExpression)whereExpression).getLeftOperand().getEdmType();
-        if(EdmSimpleTypeKind.String.getEdmSimpleTypeInstance().isCompatible(type)){
-          return JPQLStatement.DELIMITER.PARENTHESIS_LEFT + left + JPQLStatement.DELIMITER.SPACE
-              + (!"null".equals(right) ? JPQLStatement.Operator.LIKE : "IS") + JPQLStatement.DELIMITER.SPACE + right
-              + ("null".equals(right) ? "" : " ESCAPE '\\'") + JPQLStatement.DELIMITER.PARENTHESIS_RIGHT;
-        }
-        return JPQLStatement.DELIMITER.PARENTHESIS_LEFT + left + JPQLStatement.DELIMITER.SPACE
-            + (!"null".equals(right) ? JPQLStatement.Operator.EQ : "IS") + JPQLStatement.DELIMITER.SPACE + right
-            + JPQLStatement.DELIMITER.PARENTHESIS_RIGHT;
-      case NE:
-        return JPQLStatement.DELIMITER.PARENTHESIS_LEFT + left + JPQLStatement.DELIMITER.SPACE
-            + (!"null".equals(right) ?
-                JPQLStatement.Operator.NE :
-                "IS" + JPQLStatement.DELIMITER.SPACE + JPQLStatement.Operator.NOT)
-            + JPQLStatement.DELIMITER.SPACE + right
-            + JPQLStatement.DELIMITER.PARENTHESIS_RIGHT;
-      case LT:
-        return JPQLStatement.DELIMITER.PARENTHESIS_LEFT + left + JPQLStatement.DELIMITER.SPACE
-            + JPQLStatement.Operator.LT + JPQLStatement.DELIMITER.SPACE + right
-            + JPQLStatement.DELIMITER.PARENTHESIS_RIGHT;
-      case LE:
-        return JPQLStatement.DELIMITER.PARENTHESIS_LEFT + left + JPQLStatement.DELIMITER.SPACE
-            + JPQLStatement.Operator.LE + JPQLStatement.DELIMITER.SPACE + right
-            + JPQLStatement.DELIMITER.PARENTHESIS_RIGHT;
-      case GT:
-        return JPQLStatement.DELIMITER.PARENTHESIS_LEFT + left + JPQLStatement.DELIMITER.SPACE
-            + JPQLStatement.Operator.GT + JPQLStatement.DELIMITER.SPACE + right
-            + JPQLStatement.DELIMITER.PARENTHESIS_RIGHT;
-      case GE:
-        return JPQLStatement.DELIMITER.PARENTHESIS_LEFT + left + JPQLStatement.DELIMITER.SPACE
-            + JPQLStatement.Operator.GE + JPQLStatement.DELIMITER.SPACE + right
-            + JPQLStatement.DELIMITER.PARENTHESIS_RIGHT;
-      case PROPERTY_ACCESS:
-        reInitializePositionalParameters();
-        throw new ODataNotImplementedException();
-      default:
-        reInitializePositionalParameters();
-        throw new ODataNotImplementedException();
+      return parseBinary(binaryExpression.getOperator(), binaryExpression.getLeftOperand(), binaryExpression.getRightOperand(), tableAlias, prefix);
 
-      }
+
+
 
     case PROPERTY:
       String returnStr = getPropertyName(whereExpression);
@@ -463,6 +507,23 @@ public class ODataExpressionParser {
         keyFilters.append(JPQLStatement.DELIMITER.SPACE + JPQLStatement.Operator.AND + JPQLStatement.DELIMITER.SPACE);
       }
       i++;
+      EdmSimplePropertyImplProv edmProp = (EdmSimplePropertyImplProv) keyPredicate.getProperty();
+      if (edmProp.getComposite() != null) {
+        String[] values = unquote(keyPredicate.getLiteral()).split("~");
+        List<KeyPredicate> compositeKeyPredicates = new LinkedList<KeyPredicate>();
+        int j = 0;
+        for (EdmProperty p: edmProp.getComposite()) {
+          if (j < values.length) {
+            KeyPredicate key = new KeyPredicateImpl(values[j], p);
+            compositeKeyPredicates.add(key);
+          }
+          j++;
+        }
+        String expression = "("+parseKeyPredicates(compositeKeyPredicates, tableAlias, prefix)+")";
+        keyFilters.append(expression);
+        continue;
+      }
+
       literal = keyPredicate.getLiteral();
       try {
         if (keyPredicate.getProperty().getMapping().getInternalExpression() != null && tableAlias == null) {
