@@ -380,7 +380,14 @@ public class JPAEntity {
             int i = 0;
             for (EdmProperty p: ((EdmSimplePropertyImplProv)edmProperty).getComposite()) {
               if (i < values.length) {
-                Object valueObj = ((AbstractSimpleType) p.getType()).valueOfString(values[i], EdmLiteralKind.JSON, p.getFacets(), ((JPAEdmMappingImpl) p.getMapping()).getOriginaType());
+                Object valueObj = null;
+                if (!((EdmSimplePropertyImplProv) p).getProperty().isForeignKey() && oDataEntryProperties.containsKey(p.getName())) {
+                  valueObj = oDataEntryProperties.get(p.getName());
+                } else {
+                  if (!"null".equals(values[i])) {
+                    valueObj = ((AbstractSimpleType) p.getType()).valueOfString(values[i], EdmLiteralKind.JSON, p.getFacets(), ((JPAEdmMappingImpl) p.getMapping()).getOriginaType());
+                  }
+                }
                 oDataEntryPropertiesComposite.put(p.getName(), valueObj);
                 setEntityValue(oDataEntryPropertiesComposite, created, p.getName(), p, null, isNullable);
               }

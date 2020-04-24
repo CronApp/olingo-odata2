@@ -50,6 +50,7 @@ import org.apache.olingo.odata2.api.uri.expression.OrderExpression;
 import org.apache.olingo.odata2.api.uri.expression.PropertyExpression;
 import org.apache.olingo.odata2.api.uri.expression.SortOrder;
 import org.apache.olingo.odata2.api.uri.expression.UnaryExpression;
+import org.apache.olingo.odata2.core.edm.AbstractSimpleType;
 import org.apache.olingo.odata2.core.edm.EdmNull;
 import org.apache.olingo.odata2.core.edm.provider.EdmSimplePropertyImplProv;
 import org.apache.olingo.odata2.core.uri.KeyPredicateImpl;
@@ -261,7 +262,8 @@ public class ODataExpressionParser {
                 expression += " AND ";
               }
 
-              LiteralExpressionImpl literal = (LiteralExpressionImpl)  filterParser.parseFilterString("'"+values[i]+"'").getExpression();
+              String literalStr = ((AbstractSimpleType) p.getType()).toUriLiteral(values[i]);
+              LiteralExpressionImpl literal = (LiteralExpressionImpl)  filterParser.parseFilterString(literalStr).getExpression();
               expression += parseBinary(binaryExpression.getOperator(), left, literal, tableAlias, prefix);
             }
             i++;
