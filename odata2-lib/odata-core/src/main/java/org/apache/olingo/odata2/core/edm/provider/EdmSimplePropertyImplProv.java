@@ -63,4 +63,8 @@ public class EdmSimplePropertyImplProv extends EdmPropertyImplProv {
   public List<EdmProperty> getComposite() {
     return this.composite;
   }
+
+  public SimpleProperty getProperty() {
+    return this.property;
+  }
 }

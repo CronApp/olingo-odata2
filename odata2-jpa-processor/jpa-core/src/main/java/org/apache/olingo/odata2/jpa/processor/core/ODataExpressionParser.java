@@ -632,6 +632,7 @@ public class ODataExpressionParser {
       }
       uriLiteral = prefix + index;
       index++;
+      ODataExpressionParser.index.set(index);
     } else if (EdmSimpleTypeKind.DateTime.getEdmSimpleTypeInstance().isCompatible(edmSimpleType)
         || EdmSimpleTypeKind.DateTimeOffset.getEdmSimpleTypeInstance().isCompatible(edmSimpleType)) {
       try {
@@ -644,7 +645,7 @@ public class ODataExpressionParser {
         }
         uriLiteral = prefix + index;
         index++;
-
+        ODataExpressionParser.index.set(index);
       } catch (EdmSimpleTypeException e) {
         throw ODataJPARuntimeException.throwException(ODataJPARuntimeException.GENERAL.addContent(e.getMessage()), e);
       }
@@ -666,6 +667,7 @@ public class ODataExpressionParser {
        }
        uriLiteral = prefix + index;
        index++;
+       ODataExpressionParser.index.set(index);
       } catch (EdmSimpleTypeException e) {
         throw ODataJPARuntimeException.throwException(ODataJPARuntimeException.GENERAL.addContent(e.getMessage()), e);
       }
@@ -673,7 +675,6 @@ public class ODataExpressionParser {
     } else {
       uriLiteral = evaluateExpressionForNumbers(uriLiteral, edmSimpleType, edmMappedType, prefix);
     }
-    ODataExpressionParser.index.set(index);
     return uriLiteral;
   }
 

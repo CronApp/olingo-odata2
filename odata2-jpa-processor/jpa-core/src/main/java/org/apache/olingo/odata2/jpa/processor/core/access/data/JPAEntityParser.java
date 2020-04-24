@@ -36,6 +36,7 @@ import java.util.Map;
 
 import org.apache.olingo.odata2.api.edm.*;
 import org.apache.olingo.odata2.api.uri.UriInfo;
+import org.apache.olingo.odata2.core.edm.AbstractSimpleType;
 import org.apache.olingo.odata2.core.edm.provider.EdmPropertyImplProv;
 import org.apache.olingo.odata2.core.edm.provider.EdmSimplePropertyImplProv;
 import org.apache.olingo.odata2.jpa.processor.api.ODataJPAContext;
@@ -152,11 +153,22 @@ public final class JPAEntityParser {
         if (((EdmSimplePropertyImplProv) property).getComposite() != null) {
           propertyValue = "";
           for(EdmProperty p: ((EdmSimplePropertyImplProv) property).getComposite()) {
-            String methodName = jpaEmbeddableKeyMap.get(jpaEntityAccessKey).get(p.getName());
             if (!((String)propertyValue).isEmpty()) {
               propertyValue += "~";
             }
-            propertyValue = (String) propertyValue + getEmbeddablePropertyValue(methodName, jpaEntity);
+
+            Object value = null;
+            if (((EdmSimplePropertyImplProv) p).getProperty().isForeignKey()) {
+              String methodName = null;
+              methodName = jpaEmbeddableKeyMap.get(jpaEntityAccessKey).get(p.getName());
+
+              value = getEmbeddablePropertyValue(methodName, jpaEntity);
+            } else {
+              value = getPropertyValue(accessModifierMap.get(p.getName()), jpaEntity, p.getName());
+            }
+            String valueStr = ((AbstractSimpleType) p.getType()).valueToString(value, EdmLiteralKind.JSON, p.getFacets());
+
+            propertyValue = (String) propertyValue + valueStr;
           }
         } else {
 

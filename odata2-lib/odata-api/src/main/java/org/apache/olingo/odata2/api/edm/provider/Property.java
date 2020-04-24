@@ -40,6 +40,7 @@ public abstract class Property {
   private List<AnnotationAttribute> annotationAttributes;
   private List<AnnotationElement> annotationElements;
   private List<Property> composite;
+  private boolean isForeignKey;
 
   /**
    * @return <b>String</b> name of this property
@@ -202,5 +203,13 @@ public abstract class Property {
 
   public List<Property> getComposite() {
     return this.composite;
+  }
+
+  public boolean isForeignKey() {
+    return isForeignKey;
+  }
+
+  public void setForeignKey(boolean foreignKey) {
+    isForeignKey = foreignKey;
   }
 }

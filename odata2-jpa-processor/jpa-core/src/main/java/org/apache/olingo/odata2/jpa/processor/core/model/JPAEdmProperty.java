@@ -202,6 +202,7 @@ public class JPAEdmProperty extends JPAEdmBaseViewImpl implements
         entityTypeName = entityTypeView.getJPAEntityType().getName();
       }
 
+      List<SimpleProperty> objectKey = new LinkedList<SimpleProperty>();
       for (Object jpaAttribute : jpaAttributes) {
         currentAttribute = (Attribute<?, ?>) jpaAttribute;
 
@@ -320,15 +321,39 @@ public class JPAEdmProperty extends JPAEdmBaseViewImpl implements
             || attributeType == PersistentAttributeType.MANY_TO_ONE)
             && (currentAttribute instanceof SingularAttribute && ((SingularAttribute<?, ?>) currentAttribute).isId())) {
 
-          if (keyView == null) {
-            keyView = new JPAEdmKey(JPAEdmProperty.this);
-            keyViewBuilder = keyView.getBuilder();
-          }
-
-          if (keyViewBuilder != null) {
-            keyViewBuilder.build();
-          }
+          objectKey.add(currentSimpleProperty);
         }
+      }
+
+      SimpleProperty compositeProperty = new SimpleProperty();
+      currentSimpleProperty = compositeProperty;
+      JPAEdmNameBuilder.build(JPAEdmProperty.this, false, true, false);
+      compositeProperty.setType(EdmSimpleTypeKind.String);
+      Facets facets = new Facets();
+      compositeProperty.setFacets(facets);
+      compositeProperty.setName("_objectKey");
+      ((JPAEdmMappingImpl) compositeProperty.getMapping()).setJPAType(String.class);
+      for (SimpleProperty p: objectKey) {
+        if (p.getComposite() != null) {
+          for (Property composite: p.getComposite()) {
+            compositeProperty.addComposite(composite);
+            composite.setForeignKey(true);
+          }
+        } else {
+          compositeProperty.addComposite(p);
+          p.setForeignKey(false);
+        }
+      }
+
+      properties.add(compositeProperty);
+
+      if (keyView == null) {
+        keyView = new JPAEdmKey(JPAEdmProperty.this);
+        keyViewBuilder = keyView.getBuilder();
+      }
+
+      if (keyViewBuilder != null) {
+        keyViewBuilder.build();
       }
 
     }
@@ -421,6 +446,7 @@ public class JPAEdmProperty extends JPAEdmBaseViewImpl implements
         totaJoinColumns = 1;
         joinColumnIndex++;
         buildForeignKey(joinColumn, jpaAttribute, joinColumnIndex);
+        properties.add(currentSimpleProperty);
       }
     }
 
