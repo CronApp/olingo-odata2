@@ -365,12 +365,12 @@ public class JPAEntity {
 
         switch (edmTyped.getType().getKind()) {
         case SIMPLE:
+          EdmProperty edmProperty = (EdmProperty)oDataEntityType.getProperty(propertyName);
           if (isCreate == false) {
-            if (keyNames.contains(edmTyped.getName())) {
+            if (keyNames.contains(edmTyped.getName()) || ((EdmSimplePropertyImplProv)edmProperty).getProperty().isOriginalId()) {
               continue;
             }
           }
-          EdmProperty edmProperty = (EdmProperty)oDataEntityType.getProperty(propertyName);
           boolean isNullable = edmProperty.getFacets() == null ? (keyNames.contains(propertyName)? false : true)
               : edmProperty.getFacets().isNullable() == null ? true : edmProperty.getFacets().isNullable();
           if (((EdmSimplePropertyImplProv) edmProperty).getComposite() != null) {
@@ -379,6 +379,10 @@ public class JPAEntity {
             String[] values = value.split("~");
             int i = 0;
             for (EdmProperty p: ((EdmSimplePropertyImplProv)edmProperty).getComposite()) {
+              if (isCreate == false && ((EdmSimplePropertyImplProv)p).getProperty().isOriginalId()) {
+                i++;
+                continue;
+              }
               if (i < values.length) {
                 Object valueObj = null;
                 if (!((EdmSimplePropertyImplProv) p).getProperty().isForeignKey() && oDataEntryProperties.containsKey(p.getName())) {

@@ -338,9 +338,11 @@ public class JPAEdmProperty extends JPAEdmBaseViewImpl implements
           for (Property composite: p.getComposite()) {
             compositeProperty.addComposite(composite);
             composite.setForeignKey(true);
+            composite.setOriginalId(true);
           }
         } else {
           compositeProperty.addComposite(p);
+          p.setOriginalId(true);
           p.setForeignKey(false);
         }
       }
@@ -425,10 +427,9 @@ public class JPAEdmProperty extends JPAEdmBaseViewImpl implements
             compositeProperty = new SimpleProperty();
             currentSimpleProperty = compositeProperty;
             JPAEdmNameBuilder.build(JPAEdmProperty.this, false, true, false);
-            EdmSimpleTypeKind simpleTypeKind = JPATypeConverter
-                .convertToEdmSimpleType(String.class, jpaAttribute);
+            EdmSimpleTypeKind simpleTypeKind = JPATypeConverter.convertToEdmSimpleType(String.class, jpaAttribute);
             compositeProperty.setType(simpleTypeKind);
-            Facets facets = JPAEdmFacets.createAndSet(jpaAttribute, compositeProperty);
+            JPAEdmFacets.createAndSet(jpaAttribute, compositeProperty);
             compositeProperty.setName(jpaAttribute.getName());
             ((JPAEdmMappingImpl) compositeProperty.getMapping()).setJPAType(String.class);
             properties.add(compositeProperty);

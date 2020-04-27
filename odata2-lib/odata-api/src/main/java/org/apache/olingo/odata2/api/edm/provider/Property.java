@@ -18,6 +18,8 @@
  ******************************************************************************/
 package org.apache.olingo.odata2.api.edm.provider;
 
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -31,6 +33,7 @@ public abstract class Property {
 
   private String name;
   private String originalName;
+  private boolean originalId = false;
   private int index = 0;
   private EdmFacets facets;
   private CustomizableFeedMappings customizableFeedMappings;
@@ -194,11 +197,38 @@ public abstract class Property {
     this.index = index;
   }
 
+  private static int countStr(String someString, char someChar) {
+    int count = 0;
+
+    for (int i = 0; i < someString.length(); i++) {
+      if (someString.charAt(i) == someChar) {
+        count++;
+      }
+    }
+
+    return count;
+  }
+
   public void addComposite(Property property) {
     if (this.composite == null) {
       this.composite = new LinkedList<Property>();
     }
     this.composite.add(property);
+    //Usando java 6
+    Collections.sort(this.composite, new Comparator<Property>() {
+      @Override
+      public int compare(Property p1, Property p2) {
+        int totalP1 = countStr(p1.getMapping().getInternalName(), '.');
+        int totalP2 = countStr(p2.getMapping().getInternalName(), '.');
+        if (totalP1 > totalP2) {
+          return 1;
+        }
+        if (totalP1 < totalP2) {
+          return -1;
+        }
+        return p1.getMapping().getInternalName().compareTo(p2.getMapping().getInternalName());
+      }
+    });
   }
 
   public List<Property> getComposite() {
@@ -211,5 +241,13 @@ public abstract class Property {
 
   public void setForeignKey(boolean foreignKey) {
     isForeignKey = foreignKey;
+  }
+
+  public boolean isOriginalId() {
+    return originalId;
+  }
+
+  public void setOriginalId(boolean originalId) {
+    this.originalId = originalId;
   }
 }
