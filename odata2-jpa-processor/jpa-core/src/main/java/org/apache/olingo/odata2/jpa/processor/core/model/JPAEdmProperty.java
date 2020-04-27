@@ -501,6 +501,7 @@ public class JPAEdmProperty extends JPAEdmBaseViewImpl implements
       currentSimpleProperty = new SimpleProperty();
       currentSimpleProperty.setOriginalName(jpaAttribute.getName());
       currentSimpleProperty.setIndex(joinColumnIndex);
+      currentSimpleProperty.setForeignKey(true);
       buildSimpleProperty(currentRefAttribute, currentSimpleProperty, joinColumn);
 
       return  currentSimpleProperty;

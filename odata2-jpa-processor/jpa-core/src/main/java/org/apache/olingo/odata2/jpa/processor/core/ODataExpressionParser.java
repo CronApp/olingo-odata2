@@ -264,6 +264,9 @@ public class ODataExpressionParser {
 
               String literalStr = ((AbstractSimpleType) p.getType()).toUriLiteral(values[i]);
               LiteralExpressionImpl literal = (LiteralExpressionImpl)  filterParser.parseFilterString(literalStr).getExpression();
+              if (literal == null) {
+                literal = (LiteralExpressionImpl)  filterParser.parseFilterString("null").getExpression();
+              }
               expression += parseBinary(binaryExpression.getOperator(), left, literal, tableAlias, prefix);
             }
             i++;
