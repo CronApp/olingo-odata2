@@ -22,6 +22,7 @@ import com.google.gson.JsonElement;
 import org.apache.olingo.odata2.api.commons.InlineCount;
 import org.apache.olingo.odata2.api.edm.*;
 import org.apache.olingo.odata2.api.edm.provider.NavigationProperty;
+import org.apache.olingo.odata2.api.edm.provider.Property;
 import org.apache.olingo.odata2.api.ep.entry.ODataEntry;
 import org.apache.olingo.odata2.api.exception.ODataBadRequestException;
 import org.apache.olingo.odata2.api.uri.KeyPredicate;
@@ -467,7 +468,11 @@ public class JPAProcessorImpl implements JPAProcessor {
         final ODataEntityParser oDataEntityParser = new ODataEntityParser(oDataJPAContext);
         final ODataEntry oDataEntry = oDataEntityParser.parseEntry((UriInfo) createView, oDataEntitySet, content, requestedContentType, false);
         virtualJPAEntity.create(oDataEntry);
-        recreateJPAEntityIfTargetIsNotEntitySet(createView, virtualJPAEntity);
+        try {
+          recreateJPAEntityIfTargetIsNotEntitySet(createView, virtualJPAEntity);
+        } catch (Exception e) {
+          //NoCommand
+        }
       } else if (properties != null) {
         virtualJPAEntity.create(properties);
       } else {
@@ -758,7 +763,7 @@ public class JPAProcessorImpl implements JPAProcessor {
       try {
 
         if (((JPAEdmMappingImpl) ((EdmEntityTypeImplProv) uriParserResultView.getTargetType()).getMapping()).isVirtualAccess()) {
-          List<String> names = uriParserResultView.getTargetEntitySet().getEntityType().getPropertyNames();
+          List<Property> properties = ((EdmEntityTypeImplProv) uriParserResultView.getTargetType()).getEntityType().getProperties();
 
           List<Object> newEntities = new ArrayList<Object>(entities.size());
           for (Object obj : entities) {
@@ -782,15 +787,18 @@ public class JPAProcessorImpl implements JPAProcessor {
             if (extractItens) {
               entity = new VirtualClass();
               if (obj.getClass().isArray()) {
-                int i = 0;
-
-                for (Object o : (Object[]) obj) {
-                  String key = names.get(i);
-                  entity.set(key, o);
-                  i++;
+                for (Property p: properties) {
+                  if (p.getMapping().getComplexIndex() != -1) {
+                    String key = p.getName();
+                    entity.set(key, ((Object[]) obj)[p.getMapping().getComplexIndex()]);
+                    if (p.getMapping().getInternalName().contains(".")) {
+                      String[] parts = p.getMapping().getInternalName().split("\\.");
+                      entity.set(parts[0], ((Object[]) obj)[p.getMapping().getComplexIndex()]);
+                    }
+                  }
                 }
               } else {
-                String key = names.get(0);
+                String key = properties.get(0).getName();
                 entity.set(key, obj);
               }
             }

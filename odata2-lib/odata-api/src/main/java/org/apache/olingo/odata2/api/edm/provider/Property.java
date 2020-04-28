@@ -44,6 +44,7 @@ public abstract class Property {
   private List<AnnotationElement> annotationElements;
   private List<Property> composite;
   private boolean isForeignKey;
+  private Class<?> originalType;
 
   /**
    * @return <b>String</b> name of this property
@@ -209,6 +210,10 @@ public abstract class Property {
     return count;
   }
 
+  public void setComposite(List<Property> composite) {
+    this.composite = composite;
+  }
+
   public void addComposite(Property property) {
     if (this.composite == null) {
       this.composite = new LinkedList<Property>();
@@ -249,5 +254,13 @@ public abstract class Property {
 
   public void setOriginalId(boolean originalId) {
     this.originalId = originalId;
+  }
+
+  public Class<?> getOriginalType() {
+    return originalType;
+  }
+
+  public void setOriginalType(Class<?> originalType) {
+    this.originalType = originalType;
   }
 }

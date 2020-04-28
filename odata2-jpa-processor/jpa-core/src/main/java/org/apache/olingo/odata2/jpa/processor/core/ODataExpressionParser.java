@@ -251,7 +251,7 @@ public class ODataExpressionParser {
 
           FilterParserImpl filterParser = new FilterParserImpl(null);
           String expression = "(";
-          String[] values = unquote(binaryExpression.getRightOperand().getUriLiteral()).split("~");
+          String[] values = unquote(binaryExpression.getRightOperand().getUriLiteral()).split(ODataJPAConfig.COMPOSITE_SEPARATOR);
           int i = 0;
           for (EdmProperty p: edmProp.getComposite()) {
             if (i < values.length) {
@@ -514,7 +514,7 @@ public class ODataExpressionParser {
       i++;
       EdmSimplePropertyImplProv edmProp = (EdmSimplePropertyImplProv) keyPredicate.getProperty();
       if (edmProp.getComposite() != null) {
-        String[] values = unquote(keyPredicate.getLiteral()).split("~");
+        String[] values = unquote(keyPredicate.getLiteral()).split(ODataJPAConfig.COMPOSITE_SEPARATOR);
         List<KeyPredicate> compositeKeyPredicates = new LinkedList<KeyPredicate>();
         int j = 0;
         for (EdmProperty p: edmProp.getComposite()) {

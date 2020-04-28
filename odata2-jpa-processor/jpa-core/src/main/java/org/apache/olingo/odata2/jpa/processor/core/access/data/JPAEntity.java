@@ -35,15 +35,14 @@ import org.apache.olingo.odata2.api.edm.*;
 import org.apache.olingo.odata2.api.ep.entry.EntryMetadata;
 import org.apache.olingo.odata2.api.ep.entry.ODataEntry;
 import org.apache.olingo.odata2.api.ep.feed.ODataFeed;
-import org.apache.olingo.odata2.api.uri.KeyPredicate;
 import org.apache.olingo.odata2.core.edm.AbstractSimpleType;
 import org.apache.olingo.odata2.core.edm.provider.EdmSimplePropertyImplProv;
-import org.apache.olingo.odata2.core.uri.KeyPredicateImpl;
 import org.apache.olingo.odata2.jpa.processor.api.ODataJPAContext;
 import org.apache.olingo.odata2.jpa.processor.api.OnJPAWriteContent;
 import org.apache.olingo.odata2.jpa.processor.api.exception.ODataJPAModelException;
 import org.apache.olingo.odata2.jpa.processor.api.exception.ODataJPARuntimeException;
 import org.apache.olingo.odata2.jpa.processor.api.model.JPAEdmMapping;
+import org.apache.olingo.odata2.jpa.processor.core.ODataJPAConfig;
 import org.apache.olingo.odata2.jpa.processor.core.model.JPAEdmMappingImpl;
 
 public class JPAEntity {
@@ -376,7 +375,7 @@ public class JPAEntity {
           if (((EdmSimplePropertyImplProv) edmProperty).getComposite() != null) {
             Map<String, Object> oDataEntryPropertiesComposite = new LinkedHashMap<String, Object>();
             String value = (String) oDataEntryProperties.get(propertyName);
-            String[] values = value.split("~");
+            String[] values = value.split(ODataJPAConfig.COMPOSITE_SEPARATOR);
             int i = 0;
             for (EdmProperty p: ((EdmSimplePropertyImplProv)edmProperty).getComposite()) {
               if (isCreate == false && ((EdmSimplePropertyImplProv)p).getProperty().isOriginalId()) {
@@ -393,7 +392,7 @@ public class JPAEntity {
                   }
                 }
                 oDataEntryPropertiesComposite.put(p.getName(), valueObj);
-                setEntityValue(oDataEntryPropertiesComposite, created, p.getName(), p, null, isNullable);
+                setEntityValue(oDataEntryPropertiesComposite, created, p.getName(), p, null, isNullable, isCreate);
               }
               i++;
             }
@@ -409,7 +408,7 @@ public class JPAEntity {
                 setProperty(accessModifier, jpaEntity, oDataEntryProperties.get(propertyName), (EdmSimpleType) edmTyped
                     .getType(), isNullable);
               } catch(Exception e3) {
-                setEntityValue(oDataEntryProperties, created, propertyName, edmTyped, accessModifier, isNullable);
+                setEntityValue(oDataEntryProperties, created, propertyName, edmTyped, accessModifier, isNullable, isCreate);
               }
             }
           } else {
@@ -474,7 +473,7 @@ public class JPAEntity {
     }
   }
 
-  private void setEntityValue(Map<String, Object> oDataEntryProperties, Map<String, Object> created, String propertyName, EdmTyped edmTyped, Method accessModifier, boolean isNullable) throws EdmException {
+  private void setEntityValue(Map<String, Object> oDataEntryProperties, Map<String, Object> created, String propertyName, EdmTyped edmTyped, Method accessModifier, boolean isNullable, boolean isCreate) throws EdmException {
     JPAEdmMappingImpl mapping = ((JPAEdmMappingImpl) ((EdmSimplePropertyImplProv) edmTyped).getMapping());
 
     String expression = mapping.getInternalExpression();
@@ -502,7 +501,7 @@ public class JPAEntity {
 
             if (i == parts.length - 1) {
               Field f = ReflectionUtil.getField(clazz, p);
-              if (f != null) {
+              if (f != null && isCreate) {
                 canContinue = f.getAnnotation(Id.class) != null;
               }
             } else {
@@ -535,7 +534,7 @@ public class JPAEntity {
               lastObject = o;
               Object value = mget.invoke(o);
 
-              if (value == null || (value != null && !created.containsKey(path))) {
+              if (value == null || (value != null && !created.containsKey(path)) && isCreate) {
                 value = mget.getReturnType().newInstance();
                 mset.invoke(o, value);
                 created.put(path, value);
@@ -551,7 +550,7 @@ public class JPAEntity {
                 setProperty(lastSet, lastObject, null, (EdmSimpleType) edmTyped
                     .getType(), isNullable);
               } else {
-                if (hasObject && f.getAnnotation(Id.class) == null) {
+                if (hasObject && f.getAnnotation(Id.class) == null && isCreate) {
                   continue;
                 } else {
                   setProperty(mset, o, oDataEntryProperties.get(propertyName), (EdmSimpleType) edmTyped

@@ -44,6 +44,7 @@ import org.apache.olingo.odata2.jpa.processor.api.ODataJPAQueryExtensionEntityLi
 import org.apache.olingo.odata2.jpa.processor.api.ODataJPATombstoneEntityListener;
 import org.apache.olingo.odata2.jpa.processor.api.exception.ODataJPARuntimeException;
 import org.apache.olingo.odata2.jpa.processor.api.model.JPAEdmMapping;
+import org.apache.olingo.odata2.jpa.processor.core.ODataJPAConfig;
 import org.apache.olingo.odata2.jpa.processor.core.model.JPAEdmMappingImpl;
 
 public final class JPAEntityParser {
@@ -154,15 +155,22 @@ public final class JPAEntityParser {
           propertyValue = "";
           for(EdmProperty p: ((EdmSimplePropertyImplProv) property).getComposite()) {
             if (!((String)propertyValue).isEmpty()) {
-              propertyValue += "~";
+              propertyValue += ODataJPAConfig.COMPOSITE_SEPARATOR;
             }
 
             Object value = null;
             if (((EdmSimplePropertyImplProv) p).getProperty().isForeignKey()) {
               String methodName = null;
               methodName = jpaEmbeddableKeyMap.get(jpaEntityAccessKey).get(p.getName());
-
-              value = getEmbeddablePropertyValue(methodName, jpaEntity);
+              boolean isVirtualAccess = false;
+              if (property.getMapping() != null && p.getMapping() instanceof JPAEdmMappingImpl) {
+                isVirtualAccess = ((JPAEdmMappingImpl) property.getMapping()).isVirtualAccess();
+              }
+              if (isVirtualAccess) {
+                value = getEmbeddablePropertyValue(methodName, jpaEntity, true);
+              } else {
+                value = getEmbeddablePropertyValue(methodName, jpaEntity);
+              }
             } else {
               value = getPropertyValue(accessModifierMap.get(p.getName()), jpaEntity, p.getName());
             }
@@ -729,7 +737,11 @@ public final class JPAEntityParser {
       throw ODataJPARuntimeException.throwException(ODataJPARuntimeException.INNER_EXCEPTION, exp);
     }
     if (!embeddableKey.isEmpty()) {
-      jpaEmbeddableKeyMap.put(jpaEntityType.getName(), embeddableKey);
+      if (!jpaEmbeddableKeyMap.containsKey(jpaEntityType.getName())) {
+        jpaEmbeddableKeyMap.put(jpaEntityType.getName(), embeddableKey);
+      } else {
+        jpaEmbeddableKeyMap.get(jpaEntityType.getName()).putAll(embeddableKey);
+      }
     }
     return accessModifierMap;
   }
