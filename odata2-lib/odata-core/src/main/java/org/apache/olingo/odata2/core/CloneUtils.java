@@ -17,14 +17,28 @@ public class CloneUtils {
     Object newObj = null;
 
     if (obj instanceof Map) {
-      newObj = new HashMap();
+      try {
+        newObj = obj.getClass().newInstance();
+      } catch (Throwable e) {
+        throw new RuntimeException(e);
+      }
       ((Map)newObj).putAll((Map) obj);
     }
 
     else if (obj instanceof List) {
-      newObj = new ArrayList();
+      try {
+        newObj = obj.getClass().newInstance();
+      } catch (Throwable e) {
+        throw new RuntimeException(e);
+      }
       ((List)newObj).addAll((List) obj);
-    } else {
+    }
+
+    else if (obj.getClass().getSimpleName().equals("JPAEdmMappingImpl")) {
+      newObj = getClone(obj);
+    }
+
+    else {
       newObj = obj;
     }
 
@@ -38,10 +52,10 @@ public class CloneUtils {
     return f.get(obj);
   }
 
-  public static Object getClone(Object obj) {
-    Object newObj = null;
+  public static <T> T getClone(T obj) {
+    T newObj = null;
     try {
-      newObj = obj.getClass().newInstance();
+      newObj = (T) obj.getClass().newInstance();
 
       for (Field f : obj.getClass().getDeclaredFields()) {
         f.setAccessible(true);
@@ -57,6 +71,6 @@ public class CloneUtils {
       throw new RuntimeException(e);
     }
 
-    return newObj;
+    return (T) newObj;
   }
 }
