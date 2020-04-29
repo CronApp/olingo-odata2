@@ -454,9 +454,6 @@ public class JPAEdmProperty extends JPAEdmBaseViewImpl implements
         totaJoinColumns = 1;
         joinColumnIndex++;
         SimpleProperty p = buildForeignKey(joinColumn, jpaAttribute, joinColumnIndex);
-        if (ODataJPAConfig.EXPAND_COMPOSITE_KEYS) {
-          properties.add(p);
-        }
         currentSimpleProperty.setOriginalType(jpaAttribute.getJavaType());
         properties.add(currentSimpleProperty);
       }
