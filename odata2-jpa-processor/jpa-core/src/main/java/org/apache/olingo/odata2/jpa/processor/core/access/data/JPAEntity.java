@@ -473,6 +473,18 @@ public class JPAEntity {
     }
   }
 
+  private static int countStr(String someString, char someChar) {
+    int count = 0;
+
+    for (int i = 0; i < someString.length(); i++) {
+      if (someString.charAt(i) == someChar) {
+        count++;
+      }
+    }
+
+    return count;
+  }
+
   private void setEntityValue(Map<String, Object> oDataEntryProperties, Map<String, Object> created, String propertyName, EdmTyped edmTyped, Method accessModifier, boolean isNullable, boolean isCreate) throws EdmException {
     JPAEdmMappingImpl mapping = ((JPAEdmMappingImpl) ((EdmSimplePropertyImplProv) edmTyped).getMapping());
 
@@ -485,6 +497,11 @@ public class JPAEntity {
 
     if (expression != null) {
       try {
+        boolean changingMainType = true;
+        if (countStr(expression, '.') > start) {
+          changingMainType = false;
+        }
+
         Object o = jpaEntity;
         Object current = o;
         Object lastObject = o;
@@ -501,7 +518,7 @@ public class JPAEntity {
 
             if (i == parts.length - 1) {
               Field f = ReflectionUtil.getField(clazz, p);
-              if (f != null && isCreate) {
+              if (f != null && !changingMainType) {
                 canContinue = f.getAnnotation(Id.class) != null;
               }
             } else {
@@ -534,7 +551,7 @@ public class JPAEntity {
               lastObject = o;
               Object value = mget.invoke(o);
 
-              if (value == null || (value != null && !created.containsKey(path)) && isCreate) {
+              if (value == null || (value != null && !created.containsKey(path))) {
                 value = mget.getReturnType().newInstance();
                 mset.invoke(o, value);
                 created.put(path, value);
@@ -550,7 +567,7 @@ public class JPAEntity {
                 setProperty(lastSet, lastObject, null, (EdmSimpleType) edmTyped
                     .getType(), isNullable);
               } else {
-                if (hasObject && f.getAnnotation(Id.class) == null && isCreate) {
+                if (hasObject && f.getAnnotation(Id.class) == null && !changingMainType) {
                   continue;
                 } else {
                   setProperty(mset, o, oDataEntryProperties.get(propertyName), (EdmSimpleType) edmTyped

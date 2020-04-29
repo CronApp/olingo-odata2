@@ -177,11 +177,6 @@ public class ODataExpressionParser {
             + JPQLStatement.DELIMITER.PARENTHESIS_RIGHT;
       case EQ:
         EdmSimpleType type = (EdmSimpleType)leftOperand.getEdmType();
-        if(EdmSimpleTypeKind.String.getEdmSimpleTypeInstance().isCompatible(type)){
-          return JPQLStatement.DELIMITER.PARENTHESIS_LEFT + left + JPQLStatement.DELIMITER.SPACE
-              + (!"null".equals(right) ? JPQLStatement.Operator.LIKE : "IS") + JPQLStatement.DELIMITER.SPACE + right
-              + ("null".equals(right) ? "" : " ESCAPE '\\'") + JPQLStatement.DELIMITER.PARENTHESIS_RIGHT;
-        }
         return JPQLStatement.DELIMITER.PARENTHESIS_LEFT + left + JPQLStatement.DELIMITER.SPACE
             + (!"null".equals(right) ? JPQLStatement.Operator.EQ : "IS") + JPQLStatement.DELIMITER.SPACE + right
             + JPQLStatement.DELIMITER.PARENTHESIS_RIGHT;
@@ -254,20 +249,29 @@ public class ODataExpressionParser {
           String[] values = unquote(binaryExpression.getRightOperand().getUriLiteral()).split(ODataJPAConfig.COMPOSITE_SEPARATOR);
           int i = 0;
           for (EdmProperty p: edmProp.getComposite()) {
+            if (expression.length() > 1) {
+              expression += " AND ";
+            }
+
             if (i < values.length) {
               PropertyExpressionImpl left = new PropertyExpressionImpl(values[i], null);
               left.setEdmProperty(p);
               left.setEdmType(p.getType());
-              if (expression.length() > 1) {
-                expression += " AND ";
-              }
 
               String literalStr = ((AbstractSimpleType) p.getType()).toUriLiteral(values[i]);
-              LiteralExpressionImpl literal = (LiteralExpressionImpl)  filterParser.parseFilterString(literalStr).getExpression();
+              LiteralExpressionImpl literal = null;
+              if (!"null".equals(values[i])) {
+                literal = (LiteralExpressionImpl) filterParser.parseFilterString(literalStr).getExpression();
+              }
               if (literal == null) {
                 literal = (LiteralExpressionImpl)  filterParser.parseFilterString("null").getExpression();
               }
               expression += parseBinary(binaryExpression.getOperator(), left, literal, tableAlias, prefix);
+            } else {
+              PropertyExpressionImpl left = new PropertyExpressionImpl(p.getName(), null);
+              left.setEdmProperty(p);
+              left.setEdmType(p.getType());
+              expression += parseBinary(binaryExpression.getOperator(), left, (LiteralExpressionImpl)  filterParser.parseFilterString("null").getExpression(), tableAlias, prefix);
             }
             i++;
           }
@@ -279,9 +283,6 @@ public class ODataExpressionParser {
       }
 
       return parseBinary(binaryExpression.getOperator(), binaryExpression.getLeftOperand(), binaryExpression.getRightOperand(), tableAlias, prefix);
-
-
-
 
     case PROPERTY:
       String returnStr = getPropertyName(whereExpression);
@@ -521,6 +522,9 @@ public class ODataExpressionParser {
           if (j < values.length) {
             KeyPredicate key = new KeyPredicateImpl(values[j], p);
             compositeKeyPredicates.add(key);
+          } else {
+            KeyPredicate key = new KeyPredicateImpl("null", p);
+            compositeKeyPredicates.add(key);
           }
           j++;
         }
@@ -549,7 +553,7 @@ public class ODataExpressionParser {
           keyFilters.append(tableAlias + JPQLStatement.DELIMITER.PERIOD);
 
         keyFilters.append(propertyName + JPQLStatement.DELIMITER.SPACE
-            + JPQLStatement.Operator.LIKE + JPQLStatement.DELIMITER.SPACE + literal +  " ESCAPE '\\'");
+            + JPQLStatement.Operator.EQ + JPQLStatement.DELIMITER.SPACE + literal);
        
       }else{
         if (tableAlias != null)
