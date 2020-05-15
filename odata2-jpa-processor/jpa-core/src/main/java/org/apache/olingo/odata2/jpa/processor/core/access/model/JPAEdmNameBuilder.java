@@ -178,7 +178,7 @@ public class JPAEdmNameBuilder {
         mapping.setJPAColumnName(jpaAttributeName);
       }
       if (isForeignKey) {
-        jpaAttributeName += "." + view.getJPAReferencedAttribute().getName();
+        jpaAttributeName += "." + joinColumnNames[1];
       }
     } else {
       ManagedType<?> managedType = jpaAttribute.getDeclaringType();

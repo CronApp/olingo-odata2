@@ -18,6 +18,9 @@
  ******************************************************************************/
 package org.apache.olingo.odata2.api.edm.provider;
 
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.LinkedList;
 import java.util.List;
 
 import org.apache.olingo.odata2.api.edm.EdmFacets;
@@ -29,6 +32,9 @@ import org.apache.olingo.odata2.api.edm.EdmFacets;
 public abstract class Property {
 
   private String name;
+  private String originalName;
+  private boolean originalId = false;
+  private int index = 0;
   private EdmFacets facets;
   private CustomizableFeedMappings customizableFeedMappings;
   private String mimeType;
@@ -36,6 +42,9 @@ public abstract class Property {
   private Documentation documentation;
   private List<AnnotationAttribute> annotationAttributes;
   private List<AnnotationElement> annotationElements;
+  private List<Property> composite;
+  private boolean isForeignKey;
+  private Class<?> originalType;
 
   /**
    * @return <b>String</b> name of this property
@@ -171,5 +180,87 @@ public abstract class Property {
   public Property setAnnotationElements(final List<AnnotationElement> annotationElements) {
     this.annotationElements = annotationElements;
     return this;
+  }
+
+  public String getOriginalName() {
+    return originalName;
+  }
+
+  public void setOriginalName(String originalName) {
+    this.originalName = originalName;
+  }
+
+  public int getIndex() {
+    return index;
+  }
+
+  public void setIndex(int index) {
+    this.index = index;
+  }
+
+  private static int countStr(String someString, char someChar) {
+    int count = 0;
+
+    for (int i = 0; i < someString.length(); i++) {
+      if (someString.charAt(i) == someChar) {
+        count++;
+      }
+    }
+
+    return count;
+  }
+
+  public void setComposite(List<Property> composite) {
+    this.composite = composite;
+  }
+
+  public void addComposite(Property property) {
+    if (this.composite == null) {
+      this.composite = new LinkedList<Property>();
+    }
+    this.composite.add(property);
+    //Usando java 6
+    Collections.sort(this.composite, new Comparator<Property>() {
+      @Override
+      public int compare(Property p1, Property p2) {
+        int totalP1 = countStr(p1.getMapping().getInternalName(), '.');
+        int totalP2 = countStr(p2.getMapping().getInternalName(), '.');
+        if (totalP1 > totalP2) {
+          return 1;
+        }
+        if (totalP1 < totalP2) {
+          return -1;
+        }
+        return p1.getMapping().getInternalName().compareTo(p2.getMapping().getInternalName());
+      }
+    });
+  }
+
+  public List<Property> getComposite() {
+    return this.composite;
+  }
+
+  public boolean isForeignKey() {
+    return isForeignKey;
+  }
+
+  public void setForeignKey(boolean foreignKey) {
+    isForeignKey = foreignKey;
+  }
+
+  public boolean isOriginalId() {
+    return originalId;
+  }
+
+  public void setOriginalId(boolean originalId) {
+    this.originalId = originalId;
+  }
+
+  public Class<?> getOriginalType() {
+    return originalType;
+  }
+
+  public void setOriginalType(Class<?> originalType) {
+    this.originalType = originalType;
   }
 }

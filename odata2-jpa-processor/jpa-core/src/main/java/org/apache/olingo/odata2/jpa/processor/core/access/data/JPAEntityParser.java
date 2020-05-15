@@ -36,11 +36,15 @@ import java.util.Map;
 
 import org.apache.olingo.odata2.api.edm.*;
 import org.apache.olingo.odata2.api.uri.UriInfo;
+import org.apache.olingo.odata2.core.edm.AbstractSimpleType;
+import org.apache.olingo.odata2.core.edm.provider.EdmPropertyImplProv;
+import org.apache.olingo.odata2.core.edm.provider.EdmSimplePropertyImplProv;
 import org.apache.olingo.odata2.jpa.processor.api.ODataJPAContext;
 import org.apache.olingo.odata2.jpa.processor.api.ODataJPAQueryExtensionEntityListener;
 import org.apache.olingo.odata2.jpa.processor.api.ODataJPATombstoneEntityListener;
 import org.apache.olingo.odata2.jpa.processor.api.exception.ODataJPARuntimeException;
 import org.apache.olingo.odata2.jpa.processor.api.model.JPAEdmMapping;
+import org.apache.olingo.odata2.jpa.processor.core.ODataJPAConfig;
 import org.apache.olingo.odata2.jpa.processor.core.model.JPAEdmMappingImpl;
 
 public final class JPAEntityParser {
@@ -146,32 +150,61 @@ public final class JPAEntityParser {
         }
 
         propertyValue = jpaEntity;
-
         String propertyName = property.getName();
-        Method method = accessModifierMap.get(propertyName);
-        if (method == null && !hasCalc) {
-          String methodName = jpaEmbeddableKeyMap.get(jpaEntityAccessKey).get(propertyName);
-          if (methodName != null) {
-        	  boolean isVirtualAccess = false;
-        	  if (property.getMapping() != null && property.getMapping() instanceof JPAEdmMappingImpl) {
-        		  isVirtualAccess = ((JPAEdmMappingImpl) property.getMapping()).isVirtualAccess();
-        	  }
-        	if (isVirtualAccess) {
-        		propertyValue = getEmbeddablePropertyValue(methodName, propertyValue, true);
-        	} else {
-        		propertyValue = getEmbeddablePropertyValue(methodName, propertyValue);
-        	}
+        if (((EdmSimplePropertyImplProv) property).getComposite() != null) {
+          propertyValue = "";
+          for(EdmProperty p: ((EdmSimplePropertyImplProv) property).getComposite()) {
+            if (!((String)propertyValue).isEmpty()) {
+              propertyValue += ODataJPAConfig.COMPOSITE_SEPARATOR;
+            }
+
+            Object value = null;
+            if (((EdmSimplePropertyImplProv) p).getProperty().isForeignKey()) {
+              String methodName = null;
+              methodName = jpaEmbeddableKeyMap.get(jpaEntityAccessKey).get(p.getName());
+              boolean isVirtualAccess = false;
+              if (property.getMapping() != null && p.getMapping() instanceof JPAEdmMappingImpl) {
+                isVirtualAccess = ((JPAEdmMappingImpl) property.getMapping()).isVirtualAccess();
+              }
+              if (isVirtualAccess) {
+                value = getEmbeddablePropertyValue(methodName, jpaEntity, true);
+              } else {
+                value = getEmbeddablePropertyValue(methodName, jpaEntity);
+              }
+            } else {
+              value = getPropertyValue(accessModifierMap.get(p.getName()), jpaEntity, p.getName());
+            }
+            String valueStr = ((AbstractSimpleType) p.getType()).valueToString(value, EdmLiteralKind.JSON, p.getFacets());
+
+            propertyValue = (String) propertyValue + valueStr;
           }
         } else {
-          propertyValue = getPropertyValue(accessModifierMap.get(propertyName), propertyValue, propertyName);
-        }
-        if (property.getType().getKind()
-            .equals(EdmTypeKind.COMPLEX)) {
-          propertyValue = parse2EdmPropertyValueMap(propertyValue, (EdmStructuralType) property.getType());
-        }
 
-        if (defaults != null && propertyValue == null) {
-          propertyValue = defaults.get(propertyName);
+          Method method = accessModifierMap.get(propertyName);
+          if (method == null && !hasCalc) {
+            String methodName = jpaEmbeddableKeyMap.get(jpaEntityAccessKey).get(propertyName);
+            if (methodName != null) {
+              boolean isVirtualAccess = false;
+              if (property.getMapping() != null && property.getMapping() instanceof JPAEdmMappingImpl) {
+                isVirtualAccess = ((JPAEdmMappingImpl) property.getMapping()).isVirtualAccess();
+              }
+              if (isVirtualAccess) {
+                propertyValue = getEmbeddablePropertyValue(methodName, propertyValue, true);
+              } else {
+                propertyValue = getEmbeddablePropertyValue(methodName, propertyValue);
+              }
+            }
+          } else {
+            propertyValue = getPropertyValue(accessModifierMap.get(propertyName), propertyValue, propertyName);
+          }
+          if (property.getType().getKind()
+              .equals(EdmTypeKind.COMPLEX)) {
+            propertyValue = parse2EdmPropertyValueMap(propertyValue, (EdmStructuralType) property.getType());
+          }
+
+          if (defaults != null && propertyValue == null) {
+            propertyValue = defaults.get(propertyName);
+          }
         }
 
         edmEntity.put(propertyName, propertyValue);
@@ -627,6 +660,9 @@ public final class JPAEntityParser {
     Method method = null;
     try {
       for (EdmProperty property : edmProperties) {
+        if (((EdmSimplePropertyImplProv) property).getComposite() != null) {
+          accessModifierMap.putAll(getAccessModifiers(((EdmSimplePropertyImplProv) property).getComposite(), jpaEntityType, accessModifier));
+        }
         method = null;
         String propertyName = property.getName();
         if (accessModifierMap.containsKey(propertyName)) {
@@ -701,7 +737,11 @@ public final class JPAEntityParser {
       throw ODataJPARuntimeException.throwException(ODataJPARuntimeException.INNER_EXCEPTION, exp);
     }
     if (!embeddableKey.isEmpty()) {
-      jpaEmbeddableKeyMap.put(jpaEntityType.getName(), embeddableKey);
+      if (!jpaEmbeddableKeyMap.containsKey(jpaEntityType.getName())) {
+        jpaEmbeddableKeyMap.put(jpaEntityType.getName(), embeddableKey);
+      } else {
+        jpaEmbeddableKeyMap.get(jpaEntityType.getName()).putAll(embeddableKey);
+      }
     }
     return accessModifierMap;
   }

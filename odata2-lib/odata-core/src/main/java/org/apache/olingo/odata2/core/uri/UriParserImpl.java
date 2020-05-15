@@ -496,8 +496,7 @@ public class UriParserImpl extends UriParser {
         }
       }
       if (keyProperty == null) {
-        //TODO: Habilitar parêmetros
-        //keyProperty = (EdmProperty) ((EdmEntityTypeImplProv) entityType).getProperty(name);
+        keyProperty = (EdmProperty) ((EdmEntityTypeImplProv) entityType).getProperty(name);
       }
       if (keyProperty == null) {
         throw new UriSyntaxException(UriSyntaxException.INVALIDKEYPREDICATE.addContent(keyPredicate));
@@ -509,10 +508,6 @@ public class UriParserImpl extends UriParser {
 
       final EdmLiteral uriLiteral = parseLiteral(value, (EdmSimpleType) keyProperty.getType());
       keyPredicates.add(new KeyPredicateImpl(uriLiteral.getLiteral(), keyProperty));
-    }
-
-    if (parsedKeyProperties.size() != keyProperties.size()) {
-      throw new UriSyntaxException(UriSyntaxException.INVALIDKEYPREDICATE.addContent(keyPredicate));
     }
 
     return keyPredicates;
