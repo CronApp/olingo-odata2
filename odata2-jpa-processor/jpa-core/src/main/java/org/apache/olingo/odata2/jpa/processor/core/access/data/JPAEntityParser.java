@@ -153,6 +153,7 @@ public final class JPAEntityParser {
         String propertyName = property.getName();
         if (((EdmSimplePropertyImplProv) property).getComposite() != null) {
           propertyValue = "";
+          boolean isNull = true;
           for(EdmProperty p: ((EdmSimplePropertyImplProv) property).getComposite()) {
             if (!((String)propertyValue).isEmpty()) {
               propertyValue += ODataJPAConfig.COMPOSITE_SEPARATOR;
@@ -174,9 +175,15 @@ public final class JPAEntityParser {
             } else {
               value = getPropertyValue(accessModifierMap.get(p.getName()), jpaEntity, p.getName());
             }
+            if (value != null) {
+              isNull = false;
+            }
             String valueStr = ((AbstractSimpleType) p.getType()).valueToString(value, EdmLiteralKind.JSON, p.getFacets());
 
             propertyValue = (String) propertyValue + valueStr;
+          }
+          if (isNull) {
+            propertyValue = null;
           }
         } else {
 
