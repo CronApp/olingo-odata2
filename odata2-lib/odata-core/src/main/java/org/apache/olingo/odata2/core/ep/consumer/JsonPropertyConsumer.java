@@ -33,6 +33,7 @@ import org.apache.olingo.odata2.api.edm.EdmSimpleType;
 import org.apache.olingo.odata2.api.edm.EdmSimpleTypeKind;
 import org.apache.olingo.odata2.api.ep.EntityProviderException;
 import org.apache.olingo.odata2.api.ep.EntityProviderReadProperties;
+import org.apache.olingo.odata2.core.edm.AbstractSimpleType;
 import org.apache.olingo.odata2.core.ep.aggregator.EntityComplexPropertyInfo;
 import org.apache.olingo.odata2.core.ep.aggregator.EntityInfoAggregator;
 import org.apache.olingo.odata2.core.ep.aggregator.EntityPropertyInfo;
@@ -247,6 +248,9 @@ public class JsonPropertyConsumer {
     final Class<?> typeMappingClass = typeMapping == null ? type.getDefaultType() : (Class<?>) typeMapping;
     final EdmFacets facets = readProperties == null || readProperties.isValidatingFacets() ?
         entityPropertyInfo.getFacets() : null;
+    if (type instanceof AbstractSimpleType) {
+      return ((AbstractSimpleType) type).valueOfString((String) value, EdmLiteralKind.JSON, facets, typeMappingClass, entityPropertyInfo);
+    }
     return type.valueOfString((String) value, EdmLiteralKind.JSON, facets, typeMappingClass);
   }
 
