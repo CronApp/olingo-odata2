@@ -43,6 +43,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Locale;
 
 public class ODataServlet extends HttpServlet {
 
@@ -61,30 +62,38 @@ public class ODataServlet extends HttpServlet {
   private static final int DEFAULT_BUFFER_SIZE = 32768;
   private static final String DEFAULT_READ_CHARSET = "utf-8";
 
+  public static ThreadLocal<Locale> LOCALE = new ThreadLocal<Locale>();
+
   @Override
   protected void service(final HttpServletRequest req, final HttpServletResponse resp) throws IOException {
-    // We have to create the Service Factory here because otherwise we do not have access to the error callback
-    ODataServiceFactory serviceFactory = getServiceFactory(req);
-    if(serviceFactory == null) {
-      throw new ODataRuntimeException("Unable to get Service Factory. Check either '" +
-          ODataServiceFactory.FACTORY_LABEL + "' or '" + ODataServiceFactory.FACTORY_INSTANCE_LABEL + "' config.");
-    }
-
-    String xHttpMethod = req.getHeader("X-HTTP-Method");
-    String xHttpMethodOverride = req.getHeader("X-HTTP-Method-Override");
-    if (xHttpMethod != null && xHttpMethodOverride != null) {
-      if (!xHttpMethod.equalsIgnoreCase(xHttpMethodOverride)) {
-        ODataExceptionWrapper wrapper = new ODataExceptionWrapper(req, serviceFactory);
-        createResponse(resp, wrapper.wrapInExceptionResponse(
-            new ODataBadRequestException(ODataBadRequestException.AMBIGUOUS_XMETHOD)));
-        return;
+    try {
+      LOCALE.set(req.getLocale());
+      // We have to create the Service Factory here because otherwise we do not have access to the error callback
+      ODataServiceFactory serviceFactory = getServiceFactory(req);
+      if (serviceFactory == null) {
+        throw new ODataRuntimeException("Unable to get Service Factory. Check either '" +
+            ODataServiceFactory.FACTORY_LABEL + "' or '" + ODataServiceFactory.FACTORY_INSTANCE_LABEL + "' config.");
       }
-    }
 
-    if (req.getPathInfo() != null) {
-      handle(req, resp, xHttpMethod, xHttpMethodOverride, serviceFactory);
-    } else {
-      handleRedirect(req, resp, serviceFactory);
+      String xHttpMethod = req.getHeader("X-HTTP-Method");
+      String xHttpMethodOverride = req.getHeader("X-HTTP-Method-Override");
+      if (xHttpMethod != null && xHttpMethodOverride != null) {
+        if (!xHttpMethod.equalsIgnoreCase(xHttpMethodOverride)) {
+          ODataExceptionWrapper wrapper = new ODataExceptionWrapper(req, serviceFactory);
+          createResponse(resp, wrapper.wrapInExceptionResponse(
+              new ODataBadRequestException(ODataBadRequestException.AMBIGUOUS_XMETHOD)));
+          return;
+        }
+      }
+
+      if (req.getPathInfo() != null) {
+        handle(req, resp, xHttpMethod, xHttpMethodOverride, serviceFactory);
+      } else {
+        handleRedirect(req, resp, serviceFactory);
+      }
+    } finally {
+      LOCALE.set(null);
+      LOCALE.remove();
     }
   }
 
