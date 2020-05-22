@@ -17,12 +17,6 @@
 
 	<name>${project.artifactId}</name>
 
-	<parent>
-		<groupId>org.apache</groupId>
-		<artifactId>apache</artifactId>
-		<version>13</version>
-	</parent>
-
 	<inceptionYear>2013</inceptionYear>
 
 	<licenses>
