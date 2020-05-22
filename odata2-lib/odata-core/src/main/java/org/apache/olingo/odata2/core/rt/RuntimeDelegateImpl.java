@@ -53,6 +53,7 @@ import org.apache.olingo.odata2.core.ep.ProviderFacadeImpl;
 import org.apache.olingo.odata2.core.exception.MessageService;
 import org.apache.olingo.odata2.core.exception.MessageService.Message;
 import org.apache.olingo.odata2.core.processor.ODataSingleProcessorService;
+import org.apache.olingo.odata2.core.servlet.ODataServlet;
 import org.apache.olingo.odata2.core.uri.ExpandSelectTreeNodeImpl;
 import org.apache.olingo.odata2.core.uri.UriParserImpl;
 
@@ -143,7 +144,11 @@ public class RuntimeDelegateImpl extends RuntimeDelegateInstance {
 
   @Override
   public String extractExceptionMessage(final ODataMessageException exception) {
-    Message msg = MessageService.getMessage(Locale.ENGLISH, exception.getMessageReference());
+    Locale locale = ODataServlet.LOCALE.get();
+    if (locale == null) {
+      locale = Locale.ENGLISH;
+    }
+    Message msg = MessageService.getMessage(locale, exception.getMessageReference());
     return msg.getText();
   }
 }
