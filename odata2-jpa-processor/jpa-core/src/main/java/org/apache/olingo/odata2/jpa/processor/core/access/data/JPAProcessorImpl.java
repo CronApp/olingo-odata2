@@ -29,6 +29,7 @@ import org.apache.olingo.odata2.api.uri.KeyPredicate;
 import org.apache.olingo.odata2.api.uri.UriInfo;
 import org.apache.olingo.odata2.api.uri.info.*;
 import org.apache.olingo.odata2.core.edm.provider.EdmEntityTypeImplProv;
+import org.apache.olingo.odata2.core.edm.provider.EdmSimplePropertyImplProv;
 import org.apache.olingo.odata2.core.uri.KeyPredicateImpl;
 import org.apache.olingo.odata2.core.uri.UriInfoImpl;
 import org.apache.olingo.odata2.jpa.processor.api.*;
@@ -428,6 +429,31 @@ public class JPAProcessorImpl implements JPAProcessor {
 
   }
 
+  private EdmTyped findProperty(EdmEntityTypeImplProv entityType, String name) throws EdmException {
+    for (String item : entityType.getKeyPropertyNames()) {
+      if (item.equals(name)) {
+        return entityType.getProperty(item);
+      }
+    }
+
+    return null;
+  }
+
+  private List<EdmProperty> findOriginalKeys(EdmEntityTypeImplProv entityType) throws EdmException {
+    List<EdmProperty> keys = new LinkedList<EdmProperty>();
+    for (EdmProperty item : entityType.getKeyProperties()) {
+      EdmSimplePropertyImplProv property = (EdmSimplePropertyImplProv) findProperty(entityType, item.getName());
+      if (property != null) {
+        if (property.getComposite() != null) {
+          keys.addAll(property.getComposite());
+        } else {
+          keys.add(property);
+        }
+      }
+    }
+    return keys;
+  }
+
   //Caso o target seja diferente do internal, significa que é a fonte de dados, precisa pegar as permissoes da fonte de dados.
   private void recreateJPAEntityIfTargetIsNotEntitySet(final PostUriInfo createView, final JPAEntity virtualJPAEntity) throws EdmException, ODataJPARuntimeException {
     EdmEntityType edmEntityType = createView.getTargetEntitySet().getEntityType();
@@ -574,7 +600,7 @@ public class JPAProcessorImpl implements JPAProcessor {
 
         HashMap<String, Object> edmPropertyValueMap = jpaResultParser.parse2EdmPropertyValueMap(jpaEntity, edmEntityType);
 
-        for (EdmProperty key : createView.getTargetEntitySet().getEntityType().getKeyProperties()) {
+        for (EdmProperty key : findOriginalKeys((EdmEntityTypeImplProv) createView.getTargetEntitySet().getEntityType())) {
           final EdmSimpleType type = (EdmSimpleType) key.getType();
           final EdmFacets facets = key.getFacets();
           Object value = edmPropertyValueMap.get(key.getName());
