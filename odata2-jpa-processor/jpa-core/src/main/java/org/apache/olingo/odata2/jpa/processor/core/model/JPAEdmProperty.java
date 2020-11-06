@@ -345,7 +345,6 @@ public class JPAEdmProperty extends JPAEdmBaseViewImpl implements
         } else {
           compositeProperty.addComposite(p);
           p.setOriginalId(true);
-          p.setForeignKey(false);
           p.setOriginalName(p.getName());
         }
       }
