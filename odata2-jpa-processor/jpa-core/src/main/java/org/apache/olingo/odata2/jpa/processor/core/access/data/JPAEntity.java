@@ -375,7 +375,12 @@ public class JPAEntity {
           if (((EdmSimplePropertyImplProv) edmProperty).getComposite() != null) {
             Map<String, Object> oDataEntryPropertiesComposite = new LinkedHashMap<String, Object>();
             String value = (String) oDataEntryProperties.get(propertyName);
-            String[] values = value.split(ODataJPAConfig.COMPOSITE_SEPARATOR);
+            String[] values = null;
+            if (value == null) {
+              values = new String[((EdmSimplePropertyImplProv)edmProperty).getComposite().size()];
+            } else {
+              values = value.split(ODataJPAConfig.COMPOSITE_SEPARATOR);
+            }
             int i = 0;
             for (EdmProperty p: ((EdmSimplePropertyImplProv)edmProperty).getComposite()) {
               if (isCreate == false && ((EdmSimplePropertyImplProv)p).getProperty().isOriginalId()) {
