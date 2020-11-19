@@ -599,8 +599,9 @@ public class JPAProcessorImpl implements JPAProcessor {
         em.clear();
 
         HashMap<String, Object> edmPropertyValueMap = jpaResultParser.parse2EdmPropertyValueMap(jpaEntity, edmEntityType);
-
-        for (EdmProperty key : findOriginalKeys((EdmEntityTypeImplProv) createView.getTargetEntitySet().getEntityType())) {
+        List<EdmProperty> originalKeys = findOriginalKeys((EdmEntityTypeImplProv) createView.getTargetEntitySet().getEntityType());
+        mapAllKeys(edmPropertyValueMap, originalKeys);
+        for (EdmProperty key : originalKeys) {
           final EdmSimpleType type = (EdmSimpleType) key.getType();
           final EdmFacets facets = key.getFacets();
           Object value = edmPropertyValueMap.get(key.getName());
@@ -634,6 +635,18 @@ public class JPAProcessorImpl implements JPAProcessor {
       throw new RuntimeException(e);
     }
     return null;
+  }
+
+  private void mapAllKeys(HashMap<String, Object> edmPropertyValueMap, List<EdmProperty> originalKeys ) throws EdmException {
+    if (edmPropertyValueMap.get("_objectKey") != null) {
+      String[] _objectKeys = edmPropertyValueMap.get("_objectKey").toString().split("~");
+      if (_objectKeys.length == originalKeys.size()) {
+        for (int  i = 0; i < originalKeys.size(); i++) {
+          edmPropertyValueMap.put(originalKeys.get(i).getName(), _objectKeys[i]);
+        }
+      }
+
+    }
   }
 
   private <T> Object processUpdate(PutMergePatchUriInfo updateView,
