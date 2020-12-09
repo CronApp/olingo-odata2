@@ -51,6 +51,7 @@ import javax.persistence.PersistenceException;
 import javax.persistence.Query;
 import javax.persistence.TemporalType;
 import java.io.InputStream;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -645,10 +646,15 @@ public class JPAProcessorImpl implements JPAProcessor {
       String[] _objectKeys = edmPropertyValueMap.get("_objectKey").toString().split("~");
       if (_objectKeys.length == originalKeys.size()) {
         for (int  i = 0; i < originalKeys.size(); i++) {
-          edmPropertyValueMap.put(originalKeys.get(i).getName(), _objectKeys[i]);
+          try {
+            Constructor<?> cons = edmPropertyValueMap.get(originalKeys.get(i).getName()).getClass().getConstructor(String.class);
+            edmPropertyValueMap.put(originalKeys.get(i).getName(), cons.newInstance(_objectKeys[i]));
+          }
+          catch (Exception e) {
+            throw  new RuntimeException("Error on cast value");
+          }
         }
       }
-
     }
   }
 
