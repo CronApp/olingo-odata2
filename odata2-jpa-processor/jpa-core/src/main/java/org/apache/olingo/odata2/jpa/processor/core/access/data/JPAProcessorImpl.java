@@ -65,6 +65,7 @@ public class JPAProcessorImpl implements JPAProcessor {
   private static final String DELTATOKEN = "!deltatoken";
   ODataJPAContext oDataJPAContext;
   EntityManager em;
+  Map<String, Object> created = new LinkedHashMap<String, Object>();
 
   public JPAProcessorImpl(final ODataJPAContext oDataJPAContext) {
     this.oDataJPAContext = oDataJPAContext;
@@ -497,6 +498,8 @@ public class JPAProcessorImpl implements JPAProcessor {
       if (content != null) {
         final ODataEntityParser oDataEntityParser = new ODataEntityParser(oDataJPAContext);
         final ODataEntry oDataEntry = oDataEntityParser.parseEntry((UriInfo) createView, oDataEntitySet, content, requestedContentType, false);
+        Map<String, Object> extra = parseDetail((UriInfo) createView);
+        oDataEntry.getProperties().putAll(extra);
         virtualJPAEntity.create(oDataEntry);
         try {
           recreateJPAEntityIfTargetIsNotEntitySet(createView, virtualJPAEntity);
@@ -631,6 +634,9 @@ public class JPAProcessorImpl implements JPAProcessor {
           oDataJPAContext.getODataJPATransaction().commit();
         }
 
+        if (getHeader((UriInfo) createView, "X-Master-Id") != null) {
+          created.put(getHeader((UriInfo) createView, "X-Master-Id"), resultEntity);
+        }
         return resultEntity;
       }
     } catch (ODataBadRequestException e) {
@@ -638,6 +644,46 @@ public class JPAProcessorImpl implements JPAProcessor {
     } catch (EdmException e) {
       throw new RuntimeException(e);
     }
+    return null;
+  }
+
+  private Map<String, Object> parseDetail(UriInfo info) {
+    Map<String, Object> data = new LinkedHashMap<String, Object>();
+    if (getHeader(info, "X-Detail-Fill") != null) {
+      String fills = getHeader(info, "X-Detail-Fill");
+      String[] parts = fills.split(",");
+      for (String part: parts) {
+        String[] expression = part.split(":");
+        if (expression.length == 2) {
+          String key = expression[0];
+          String[] path = expression[1].split("\\.");
+          if (path.length == 2) {
+            String id = path[0].replace("$", "");
+            Object obj = created.get(id);
+            if (obj != null) {
+              try {
+                Object value = ReflectionUtil.getter(obj, path[1]);
+                data.put(key, value);
+              } catch (NoSuchFieldException e) {
+                //
+              }
+            }
+          }
+        }
+      }
+    }
+
+    return data;
+  }
+
+  private String getHeader(UriInfo info, String key) {
+    if (info.getHeaders() != null) {
+      List<String> values = info.getHeaders().get(key);
+      if (values != null && values.size() > 0) {
+        return values.get(0);
+      }
+    }
+
     return null;
   }
 

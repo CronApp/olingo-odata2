@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
- * 
+ *
  * http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -43,7 +43,7 @@ import org.apache.olingo.odata2.api.uri.expression.OrderByExpression;
 import org.apache.olingo.odata2.core.CloneUtils;
 
 /**
- *  
+ *
  */
 public class UriInfoImpl implements UriInfo {
 
@@ -77,6 +77,7 @@ public class UriInfoImpl implements UriInfo {
   private boolean composeWhere = true;
   private boolean isNew = false;
   private List<ClientCallback> clientCallbacks;
+  private Map<String, List<String>> headers;
 
   public UriType getUriType() {
     return uriType;
@@ -324,6 +325,15 @@ public class UriInfoImpl implements UriInfo {
   @Override
   public List<ClientCallback> getClientCallbacks() {
     return clientCallbacks;
+  }
+
+  @Override
+  public Map<String, List<String>> getHeaders() {
+    return headers;
+  }
+
+  public void setHeaders(Map<String, List<String>> headers) {
+    this.headers = headers;
   }
 
   public void setClientCallbacks(List<ClientCallback> clientCallbacks) {
