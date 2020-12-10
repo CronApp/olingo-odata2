@@ -25,14 +25,14 @@ import org.apache.olingo.odata2.api.ClientCallback;
 import org.apache.olingo.odata2.api.edm.provider.EdmProvider;
 import org.apache.olingo.odata2.api.processor.ODataContext;
 import org.apache.olingo.odata2.api.processor.ODataProcessor;
-import org.apache.olingo.odata2.api.uri.UriInfo;
 import org.apache.olingo.odata2.jpa.processor.api.ODataJPAContext;
 import org.apache.olingo.odata2.jpa.processor.api.ODataJPAQueryExtensionEntityListener;
 import org.apache.olingo.odata2.jpa.processor.api.ODataJPATransaction;
 import org.apache.olingo.odata2.jpa.processor.api.access.JPAPaging;
 import org.apache.olingo.odata2.jpa.processor.api.model.JPAEdmExtension;
 
-import java.util.List;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 public class ODataJPAContextImpl implements ODataJPAContext {
 
@@ -51,6 +51,7 @@ public class ODataJPAContextImpl implements ODataJPAContext {
   private ODataJPATransaction transaction = null;
   private boolean containerManaged = false;
   private ODataJPAQueryExtensionEntityListener oDataJPAQueryExtensionEntityListener;
+  private Map<Object, Map<String, Object>> created = new LinkedHashMap<Object, Map<String, Object>>();
 
   @Override
   public String getPersistenceUnitName() {
@@ -207,6 +208,11 @@ public class ODataJPAContextImpl implements ODataJPAContext {
   @Override
   public void setoDataJPAQueryExtensionEntityListener(ODataJPAQueryExtensionEntityListener oDataJPAQueryExtensionEntityListener) {
     this.oDataJPAQueryExtensionEntityListener = oDataJPAQueryExtensionEntityListener;
+  }
+
+  @Override
+  public Map<Object, Map<String, Object>> getCreatedEntities() {
+    return created;
   }
 
   @Override

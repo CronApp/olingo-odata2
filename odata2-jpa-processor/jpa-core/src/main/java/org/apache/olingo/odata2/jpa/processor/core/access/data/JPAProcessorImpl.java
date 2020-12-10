@@ -41,6 +41,7 @@ import org.apache.olingo.odata2.jpa.processor.api.exception.ODataJPARuntimeExcep
 import org.apache.olingo.odata2.jpa.processor.api.jpql.JPQLContextType;
 import org.apache.olingo.odata2.jpa.processor.api.model.JPAEdmMapping;
 import org.apache.olingo.odata2.jpa.processor.core.ODataEntityParser;
+import org.apache.olingo.odata2.jpa.processor.core.ODataJPAConfig;
 import org.apache.olingo.odata2.jpa.processor.core.ODataParameterizedWhereExpressionUtil;
 import org.apache.olingo.odata2.jpa.processor.core.access.data.JPAPage.JPAPageBuilder;
 import org.apache.olingo.odata2.jpa.processor.core.access.data.JPAQueryBuilder.JPAQueryInfo;
@@ -235,8 +236,8 @@ public class JPAProcessorImpl implements JPAProcessor {
         return resultList.size();
       }
       try {
-      return Long.valueOf(resultList.get(0).toString());
-      } catch(Exception e) {
+        return Long.valueOf(resultList.get(0).toString());
+      } catch (Exception e) {
         return resultList.size();
       }
     }
@@ -261,7 +262,7 @@ public class JPAProcessorImpl implements JPAProcessor {
   /* Process Create Entity Request */
   @Override
   public Object process(final PostUriInfo createView, final InputStream content,
-      final String requestedContentType) throws ODataJPAModelException,
+                        final String requestedContentType) throws ODataJPAModelException,
       ODataJPARuntimeException {
     return processCreate(createView, content, null, requestedContentType);
   }
@@ -275,7 +276,7 @@ public class JPAProcessorImpl implements JPAProcessor {
   /* Process Update Entity Request */
   @Override
   public Object process(final PutMergePatchUriInfo updateView,
-      final InputStream content, final String requestContentType)
+                        final InputStream content, final String requestContentType)
       throws ODataJPAModelException, ODataJPARuntimeException {
     return processUpdate(updateView, content, null, requestContentType);
   }
@@ -361,7 +362,7 @@ public class JPAProcessorImpl implements JPAProcessor {
 
   @Override
   public void process(final PostUriInfo uriInfo,
-      final InputStream content, final String requestContentType, final String contentType)
+                      final InputStream content, final String requestContentType, final String contentType)
       throws ODataJPARuntimeException, ODataJPAModelException {
     JPALink link = new JPALink(oDataJPAContext);
     link.create(uriInfo, content, requestContentType, contentType);
@@ -370,7 +371,7 @@ public class JPAProcessorImpl implements JPAProcessor {
 
   @Override
   public void process(final PutMergePatchUriInfo putUriInfo,
-      final InputStream content, final String requestContentType, final String contentType)
+                      final InputStream content, final String requestContentType, final String contentType)
       throws ODataJPARuntimeException, ODataJPAModelException {
 
     JPALink link = new JPALink(oDataJPAContext);
@@ -465,16 +466,16 @@ public class JPAProcessorImpl implements JPAProcessor {
     EdmEntityType edmEntityTypeBase = createView.getEntityContainer().getEntitySet(createView.getTargetEntitySet()
         .getEntityType().getMapping().getInternalName()).getEntityType();
 
-    if (edmEntityType != null && edmEntityTypeBase != null && !edmEntityType.equals(edmEntityTypeBase) ) {
+    if (edmEntityType != null && edmEntityTypeBase != null && !edmEntityType.equals(edmEntityTypeBase)) {
       JPAEntityParser jpaResultParser = new JPAEntityParser(oDataJPAContext, (UriInfo) createView);
-      HashMap<String, Object> edmPropertyValueMap  = jpaResultParser.parse2EdmPropertyValueMap(virtualJPAEntity.getJPAEntity(), edmEntityType);
+      HashMap<String, Object> edmPropertyValueMap = jpaResultParser.parse2EdmPropertyValueMap(virtualJPAEntity.getJPAEntity(), edmEntityType);
       virtualJPAEntity.create(edmPropertyValueMap);
     }
   }
 
   private Object processCreate(final PostUriInfo createView, final InputStream content,
-      final Map<String, Object> properties,
-      final String requestedContentType) throws ODataJPAModelException,
+                               final Map<String, Object> properties,
+                               final String requestedContentType) throws ODataJPAModelException,
       ODataJPARuntimeException {
     try {
       final EdmEntitySet oDataEntitySet = createView.getTargetEntitySet();
@@ -652,7 +653,7 @@ public class JPAProcessorImpl implements JPAProcessor {
     if (getHeader(info, "X-Detail-Fill") != null) {
       String fills = getHeader(info, "X-Detail-Fill");
       String[] parts = fills.split(",");
-      for (String part: parts) {
+      for (String part : parts) {
         String[] expression = part.split(":");
         if (expression.length == 2) {
           String key = expression[0];
@@ -661,12 +662,30 @@ public class JPAProcessorImpl implements JPAProcessor {
             String id = path[0].replace("$", "");
             Object obj = created.get(id);
             if (obj != null) {
-              try {
-                Object value = ReflectionUtil.getter(obj, path[1]);
-                data.put(key, value);
-              } catch (NoSuchFieldException e) {
-                //
+              if (path[1].equals(ODataJPAConfig.COMPOSITE_KEY_NAME)) {
+                try {
+                  Map<String, Object> values = oDataJPAContext.getCreatedEntities().get(obj);
+                  if (values != null && values.get(path[1]) != null) {
+                    final EdmEntitySet oDataEntitySet = info.getTargetEntitySet();
+                    final EdmEntityType oDataEntityType = oDataEntitySet.getEntityType();
+                    EdmProperty property = (EdmProperty) oDataEntityType.getProperty(key);
+                    EdmFacets facets = property.getFacets();
+                    EdmSimpleType type = (EdmSimpleType) property.getType();
+                    Object value = type.valueOfString(values.get(path[1]).toString(), EdmLiteralKind.DEFAULT, facets, type.getDefaultType());
+                    data.put(key, value);
+                  }
+                } catch (Exception e1) {
+                  throw new RuntimeException(e1);
+                }
+              } else {
+                try {
+                  Object value = ReflectionUtil.getter(obj, path[1]);
+                  data.put(key, value);
+                } catch (NoSuchFieldException e) {
+                  throw new RuntimeException(e);
+                }
               }
+
             }
           }
         }
@@ -687,17 +706,16 @@ public class JPAProcessorImpl implements JPAProcessor {
     return null;
   }
 
-  private void mapAllKeys(HashMap<String, Object> edmPropertyValueMap, List<EdmProperty> originalKeys ) throws EdmException {
-    if (edmPropertyValueMap.get("_objectKey") != null) {
-      String[] _objectKeys = edmPropertyValueMap.get("_objectKey").toString().split("~");
+  private void mapAllKeys(HashMap<String, Object> edmPropertyValueMap, List<EdmProperty> originalKeys) throws EdmException {
+    if (edmPropertyValueMap.get(ODataJPAConfig.COMPOSITE_KEY_NAME) != null) {
+      String[] _objectKeys = edmPropertyValueMap.get(ODataJPAConfig.COMPOSITE_KEY_NAME).toString().split(ODataJPAConfig.COMPOSITE_SEPARATOR);
       if (_objectKeys.length == originalKeys.size()) {
-        for (int  i = 0; i < originalKeys.size(); i++) {
+        for (int i = 0; i < originalKeys.size(); i++) {
           try {
             Constructor<?> cons = edmPropertyValueMap.get(originalKeys.get(i).getName()).getClass().getConstructor(String.class);
             edmPropertyValueMap.put(originalKeys.get(i).getName(), cons.newInstance(_objectKeys[i]));
-          }
-          catch (Exception e) {
-            throw  new RuntimeException("Error on cast value");
+          } catch (Exception e) {
+            throw new RuntimeException("Error on cast value");
           }
         }
       }
@@ -705,7 +723,7 @@ public class JPAProcessorImpl implements JPAProcessor {
   }
 
   private <T> Object processUpdate(PutMergePatchUriInfo updateView,
-      final InputStream content, final Map<String, Object> properties, final String requestContentType)
+                                   final InputStream content, final Map<String, Object> properties, final String requestContentType)
       throws ODataJPAModelException, ODataJPARuntimeException {
     Object jpaEntity = null;
     try {
@@ -866,8 +884,7 @@ public class JPAProcessorImpl implements JPAProcessor {
 
             if (obj instanceof JsonElement) {
               entity = new VirtualClassWrapper(obj);
-            }
-            else if (obj instanceof VirtualClassInterface) {
+            } else if (obj instanceof VirtualClassInterface) {
               entity = (VirtualClassInterface) obj;
               if (entity.getObject() != null && entity.getObject().getClass().isArray()) {
                 obj = entity.getObject();
@@ -881,7 +898,7 @@ public class JPAProcessorImpl implements JPAProcessor {
             if (extractItens) {
               entity = new VirtualClass();
               if (obj.getClass().isArray()) {
-                for (Property p: properties) {
+                for (Property p : properties) {
                   if (p.getMapping().getComplexIndex() != -1) {
                     String key = p.getName();
                     entity.set(key, ((Object[]) obj)[p.getMapping().getComplexIndex()]);
