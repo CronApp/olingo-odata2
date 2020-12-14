@@ -229,6 +229,8 @@ public final class ODataJPAResponseBuilderDefault implements ODataJPAResponseBui
       JPAEntityParser jpaResultParser = new JPAEntityParser(oDataJPAContext, (UriInfo) uriInfo);
       edmPropertyValueMap = jpaResultParser.parse2EdmPropertyValueMap(createdObject, edmEntityType);
 
+      oDataJPAContext.getCreatedEntities().put(createdObject, edmPropertyValueMap);
+
       EntityProviderWriteProperties feedProperties = null;
       try {
         feedProperties = getEntityProviderPropertiesforPost(oDataJPAContext);

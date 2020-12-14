@@ -127,6 +127,7 @@ public class ODataRequestHandler {
           context.getRequestHeader(HttpHeaders.IF_UNMODIFIED_SINCE));
 
       timingHandle2 = context.startRuntimeMeasurement("Dispatcher", "dispatch");
+      uriInfo.setHeaders(request.getRequestHeaders());
       odataResponse =
           dispatcher.dispatch(method, uriInfo, request.getBody(), request.getContentType(), acceptContentType
               .toContentTypeString());

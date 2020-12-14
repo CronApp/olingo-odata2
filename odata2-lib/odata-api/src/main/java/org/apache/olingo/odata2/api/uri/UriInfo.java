@@ -239,4 +239,6 @@ public interface UriInfo extends GetServiceDocumentUriInfo,
 
   @Override
   public List<ClientCallback> getClientCallbacks();
+
+  public Map<String, List<String>> getHeaders();
 }

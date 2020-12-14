@@ -739,6 +739,12 @@ public class JPAEntity {
         java.sql.Time t = entityPropertyValue != null ? 
             new java.sql.Time(((Calendar) entityPropertyValue).getTimeInMillis()) : null;
         method.invoke(entity, t);
+      } else if (parameterType.equals(Integer.class)) {
+        if (entityPropertyValue instanceof String) {
+          method.invoke(entity, Integer.parseInt((String) entityPropertyValue));
+        } else {
+          method.invoke(entity, entityPropertyValue);
+        }
       } else {
         method.invoke(entity, entityPropertyValue);
       }

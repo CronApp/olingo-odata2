@@ -28,6 +28,8 @@ import org.apache.olingo.odata2.api.uri.UriInfo;
 import org.apache.olingo.odata2.jpa.processor.api.access.JPAPaging;
 import org.apache.olingo.odata2.jpa.processor.api.model.JPAEdmExtension;
 
+import java.util.Map;
+
 /**
  * This class does the compilation of context objects required for OData JPA
  * Runtime. The context object should be properly initialized with values else
@@ -260,4 +262,6 @@ public interface ODataJPAContext {
   public ODataJPAQueryExtensionEntityListener getODataJPAQueryExtensionEntityListener();
 
   public void setoDataJPAQueryExtensionEntityListener(ODataJPAQueryExtensionEntityListener oDataJPAQueryExtensionEntityListener);
+
+  public Map<Object, Map<String, Object>> getCreatedEntities();
 }

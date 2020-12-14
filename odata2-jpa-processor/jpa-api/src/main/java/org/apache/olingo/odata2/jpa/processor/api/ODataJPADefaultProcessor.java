@@ -281,7 +281,7 @@ public abstract class ODataJPADefaultProcessor extends ODataJPAProcessor {
       ODataResponse batchResponse;
       List<BatchResponsePart> batchResponseParts = new ArrayList<BatchResponsePart>();
       PathInfo pathInfo = getContext().getPathInfo();
-      EntityProviderBatchProperties batchProperties = EntityProviderBatchProperties.init().pathInfo(pathInfo).build();
+      EntityProviderBatchProperties batchProperties = EntityProviderBatchProperties.init().setStrict(false).pathInfo(pathInfo).build();
       List<BatchRequestPart> batchParts = EntityProvider.parseBatchRequest(contentType, content, batchProperties);
 
       for (BatchRequestPart batchPart : batchParts) {
