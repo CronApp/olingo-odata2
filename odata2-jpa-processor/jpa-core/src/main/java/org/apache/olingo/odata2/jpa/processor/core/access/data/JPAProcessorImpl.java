@@ -46,10 +46,7 @@ import org.apache.olingo.odata2.jpa.processor.core.access.data.JPAPage.JPAPageBu
 import org.apache.olingo.odata2.jpa.processor.core.access.data.JPAQueryBuilder.JPAQueryInfo;
 import org.apache.olingo.odata2.jpa.processor.core.model.JPAEdmMappingImpl;
 
-import javax.persistence.EntityManager;
-import javax.persistence.PersistenceException;
-import javax.persistence.Query;
-import javax.persistence.TemporalType;
+import javax.persistence.*;
 import java.io.InputStream;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
@@ -725,6 +722,12 @@ public class JPAProcessorImpl implements JPAProcessor {
       throw new RuntimeException(e);
     } catch (PersistenceException e) {
       em.getTransaction().rollback();
+      throw new RuntimeException(e);
+    } catch (Exception e) {
+      EntityTransaction et = em.getTransaction();
+      if (et != null && et.isActive()) {
+        et.rollback();
+      }
       throw new RuntimeException(e);
     }
 
