@@ -868,6 +868,7 @@ public class FilterParserImpl implements FilterParser {
     // startswith
     combination = new ParameterSetCombination.PSCflex();
     combination.add(new ParameterSet(boolean_, string, string));
+    combination.add(new ParameterSet(boolean_, int32, string));
     lAvailableMethods.put(MethodOperator.STARTSWITH.toUriLiteral(), new InfoMethod(MethodOperator.STARTSWITH, 2, 2,
         combination));
 
