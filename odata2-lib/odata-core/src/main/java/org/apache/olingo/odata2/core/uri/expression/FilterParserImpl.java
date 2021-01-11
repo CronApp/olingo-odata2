@@ -856,12 +856,14 @@ public class FilterParserImpl implements FilterParser {
     // endswith
     combination = new ParameterSetCombination.PSCflex();
     combination.add(new ParameterSet(boolean_, string, string));
+    combination.add(new ParameterSet(boolean_, int32, string));
     lAvailableMethods.put(MethodOperator.ENDSWITH.toUriLiteral(), new InfoMethod(MethodOperator.ENDSWITH, 2, 2,
         combination));
 
     // indexof
     combination = new ParameterSetCombination.PSCflex();
     combination.add(new ParameterSet(int32, string, string));
+    combination.add(new ParameterSet(int32, int32, string));
     lAvailableMethods.put(MethodOperator.INDEXOF.toUriLiteral(), new InfoMethod(MethodOperator.INDEXOF, 2, 2,
         combination));
 
@@ -897,6 +899,7 @@ public class FilterParserImpl implements FilterParser {
     // substringof
     combination = new ParameterSetCombination.PSCflex();
     combination.add(new ParameterSet(boolean_, string, string));
+    combination.add(new ParameterSet(boolean_, string, int32));
     lAvailableMethods.put(MethodOperator.SUBSTRINGOF.toUriLiteral(), new InfoMethod(MethodOperator.SUBSTRINGOF, 1, -1,
         combination));
 
