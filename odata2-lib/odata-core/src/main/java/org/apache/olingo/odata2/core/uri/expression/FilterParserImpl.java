@@ -18,35 +18,12 @@
  ******************************************************************************/
 package org.apache.olingo.odata2.core.uri.expression;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
-import org.apache.olingo.odata2.api.edm.EdmComplexType;
-import org.apache.olingo.odata2.api.edm.EdmEntityType;
-import org.apache.olingo.odata2.api.edm.EdmException;
-import org.apache.olingo.odata2.api.edm.EdmMultiplicity;
-import org.apache.olingo.odata2.api.edm.EdmSimpleType;
-import org.apache.olingo.odata2.api.edm.EdmSimpleTypeKind;
-import org.apache.olingo.odata2.api.edm.EdmStructuralType;
-import org.apache.olingo.odata2.api.edm.EdmType;
-import org.apache.olingo.odata2.api.edm.EdmTypeKind;
-import org.apache.olingo.odata2.api.edm.EdmTyped;
-import org.apache.olingo.odata2.api.uri.expression.BinaryExpression;
-import org.apache.olingo.odata2.api.uri.expression.BinaryOperator;
-import org.apache.olingo.odata2.api.uri.expression.CommonExpression;
-import org.apache.olingo.odata2.api.uri.expression.ExpressionKind;
-import org.apache.olingo.odata2.api.uri.expression.ExpressionParserException;
-import org.apache.olingo.odata2.api.uri.expression.FilterExpression;
-import org.apache.olingo.odata2.api.uri.expression.LiteralExpression;
-import org.apache.olingo.odata2.api.uri.expression.MethodExpression;
-import org.apache.olingo.odata2.api.uri.expression.MethodOperator;
-import org.apache.olingo.odata2.api.uri.expression.UnaryExpression;
-import org.apache.olingo.odata2.api.uri.expression.UnaryOperator;
+import org.apache.olingo.odata2.api.edm.*;
+import org.apache.olingo.odata2.api.uri.expression.*;
 import org.apache.olingo.odata2.core.edm.EdmBoolean;
 import org.apache.olingo.odata2.core.edm.EdmSimpleTypeFacadeImpl;
+
+import java.util.*;
 
 /**
  *  
@@ -768,6 +745,8 @@ public class FilterParserImpl implements FilterParser {
 
     combination.add(new ParameterSet(boolean_, string, int32));
     combination.add(new ParameterSet(boolean_, int32, string));
+    combination.add(new ParameterSet(boolean_, string, int16));
+    combination.add(new ParameterSet(boolean_, int16, string));
     combination.add(new ParameterSet(boolean_, string, int64));
     combination.add(new ParameterSet(boolean_, int64, string));
 
@@ -857,6 +836,7 @@ public class FilterParserImpl implements FilterParser {
     combination = new ParameterSetCombination.PSCflex();
     combination.add(new ParameterSet(boolean_, string, string));
     combination.add(new ParameterSet(boolean_, int32, string));
+    combination.add(new ParameterSet(boolean_, int16, string));
     lAvailableMethods.put(MethodOperator.ENDSWITH.toUriLiteral(), new InfoMethod(MethodOperator.ENDSWITH, 2, 2,
         combination));
 
@@ -864,6 +844,8 @@ public class FilterParserImpl implements FilterParser {
     combination = new ParameterSetCombination.PSCflex();
     combination.add(new ParameterSet(int32, string, string));
     combination.add(new ParameterSet(int32, int32, string));
+    combination.add(new ParameterSet(int16, int16, string));
+    combination.add(new ParameterSet(int16, string, string));
     lAvailableMethods.put(MethodOperator.INDEXOF.toUriLiteral(), new InfoMethod(MethodOperator.INDEXOF, 2, 2,
         combination));
 
@@ -871,6 +853,7 @@ public class FilterParserImpl implements FilterParser {
     combination = new ParameterSetCombination.PSCflex();
     combination.add(new ParameterSet(boolean_, string, string));
     combination.add(new ParameterSet(boolean_, int32, string));
+    combination.add(new ParameterSet(boolean_, int16, string));
     lAvailableMethods.put(MethodOperator.STARTSWITH.toUriLiteral(), new InfoMethod(MethodOperator.STARTSWITH, 2, 2,
         combination));
 
@@ -892,7 +875,9 @@ public class FilterParserImpl implements FilterParser {
     // substring
     combination = new ParameterSetCombination.PSCflex();
     combination.add(new ParameterSet(string, string, int32));
+    combination.add(new ParameterSet(string, string, int16));
     combination.add(new ParameterSet(string, string, int32, int32));
+    combination.add(new ParameterSet(string, string, int16, int16));
     lAvailableMethods.put(MethodOperator.SUBSTRING.toUriLiteral(), new InfoMethod(MethodOperator.SUBSTRING, 1, -1,
         combination));
 
@@ -900,6 +885,7 @@ public class FilterParserImpl implements FilterParser {
     combination = new ParameterSetCombination.PSCflex();
     combination.add(new ParameterSet(boolean_, string, string));
     combination.add(new ParameterSet(boolean_, string, int32));
+    combination.add(new ParameterSet(boolean_, string, int16));
     lAvailableMethods.put(MethodOperator.SUBSTRINGOF.toUriLiteral(), new InfoMethod(MethodOperator.SUBSTRINGOF, 1, -1,
         combination));
 
@@ -912,6 +898,7 @@ public class FilterParserImpl implements FilterParser {
     // length
     combination = new ParameterSetCombination.PSCflex();
     combination.add(new ParameterSet(int32, string));
+    combination.add(new ParameterSet(int16, string));
     lAvailableMethods.put(MethodOperator.LENGTH.toUriLiteral(), new InfoMethod(MethodOperator.LENGTH, combination));
 
     // year
