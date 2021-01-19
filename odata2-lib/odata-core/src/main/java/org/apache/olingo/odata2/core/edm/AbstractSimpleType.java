@@ -18,13 +18,7 @@
  ******************************************************************************/
 package org.apache.olingo.odata2.core.edm;
 
-import org.apache.olingo.odata2.api.edm.Edm;
-import org.apache.olingo.odata2.api.edm.EdmException;
-import org.apache.olingo.odata2.api.edm.EdmFacets;
-import org.apache.olingo.odata2.api.edm.EdmLiteralKind;
-import org.apache.olingo.odata2.api.edm.EdmSimpleType;
-import org.apache.olingo.odata2.api.edm.EdmSimpleTypeException;
-import org.apache.olingo.odata2.api.edm.EdmTypeKind;
+import org.apache.olingo.odata2.api.edm.*;
 import org.apache.olingo.odata2.core.ep.aggregator.EntityPropertyInfo;
 
 /**
@@ -61,7 +55,12 @@ public abstract class AbstractSimpleType implements EdmSimpleType {
 
   @Override
   public boolean isCompatible(final EdmSimpleType simpleType) {
-    if (simpleType instanceof EdmDateTime && this instanceof  EdmDateTimeOffset || simpleType instanceof EdmDateTimeOffset && this instanceof  EdmDateTime) {
+    if ((simpleType instanceof EdmDateTime
+        && this instanceof  EdmDateTimeOffset
+        || simpleType instanceof EdmDateTimeOffset
+        && this instanceof  EdmDateTime)
+        || simpleType instanceof EdmInt16
+        || simpleType instanceof EdmInt32) {
       return true;
     }
     return equals(simpleType);
