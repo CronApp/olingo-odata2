@@ -228,8 +228,8 @@ public class JPAProcessorImpl implements JPAProcessor {
     Query query = queryBuilder.build(resultsView);
     setPositionalParametersToQuery(query);
     List<?> resultList = query.getResultList();
-    if (resultList != null && resultList.size() > 0) {
-      if (resultList.size() > 1) {
+    if (resultList != null && !resultList.isEmpty()) {
+      if (resultList.size() > 1 || query.toString().toLowerCase().contains("group by")) {
         return resultList.size();
       }
       try {
