@@ -55,12 +55,7 @@ public abstract class AbstractSimpleType implements EdmSimpleType {
 
   @Override
   public boolean isCompatible(final EdmSimpleType simpleType) {
-    if ((simpleType instanceof EdmDateTime
-        && this instanceof  EdmDateTimeOffset
-        || simpleType instanceof EdmDateTimeOffset
-        && this instanceof  EdmDateTime)
-        || simpleType instanceof EdmInt16
-        || simpleType instanceof EdmInt32) {
+    if (simpleType instanceof EdmDateTime && this instanceof  EdmDateTimeOffset || simpleType instanceof EdmDateTimeOffset && this instanceof  EdmDateTime) {
       return true;
     }
     return equals(simpleType);
