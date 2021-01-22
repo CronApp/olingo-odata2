@@ -860,16 +860,22 @@ public class FilterParserImpl implements FilterParser {
     // tolower
     combination = new ParameterSetCombination.PSCflex();
     combination.add(new ParameterSet(string, string));
+    combination.add(new ParameterSet(string, int32));
+    combination.add(new ParameterSet(string, int16));
     lAvailableMethods.put(MethodOperator.TOLOWER.toUriLiteral(), new InfoMethod(MethodOperator.TOLOWER, combination));
 
     // toupper
     combination = new ParameterSetCombination.PSCflex();
     combination.add(new ParameterSet(string, string));
+    combination.add(new ParameterSet(string, int32));
+    combination.add(new ParameterSet(string, int16));
     lAvailableMethods.put(MethodOperator.TOUPPER.toUriLiteral(), new InfoMethod(MethodOperator.TOUPPER, combination));
 
     // trim
     combination = new ParameterSetCombination.PSCflex();
     combination.add(new ParameterSet(string, string));
+    combination.add(new ParameterSet(string, int32));
+    combination.add(new ParameterSet(string, int16));
     lAvailableMethods.put(MethodOperator.TRIM.toUriLiteral(), new InfoMethod(MethodOperator.TRIM, combination));
 
     // substring
