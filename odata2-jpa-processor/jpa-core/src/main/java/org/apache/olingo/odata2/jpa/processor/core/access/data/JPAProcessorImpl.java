@@ -709,8 +709,16 @@ public class JPAProcessorImpl implements JPAProcessor {
       if (_objectKeys.length == originalKeys.size()) {
         for (int i = 0; i < originalKeys.size(); i++) {
           try {
-            Constructor<?> cons = edmPropertyValueMap.get(originalKeys.get(i).getName()).getClass().getConstructor(String.class);
-            edmPropertyValueMap.put(originalKeys.get(i).getName(), cons.newInstance(_objectKeys[i]));
+            String keyName = originalKeys.get(i).getName();
+            Object objForKey = edmPropertyValueMap.get(keyName);
+            if (objForKey != null) {
+              Constructor<?> cons = objForKey.getClass().getConstructor(String.class);
+              edmPropertyValueMap.put(keyName, cons.newInstance(_objectKeys[i]));
+            }
+            else {
+              Constructor<?> cons = ((JPAEdmMappingImpl) originalKeys.get(i).getMapping()).getOriginaType().getConstructor(String.class);
+              edmPropertyValueMap.put(keyName, cons.newInstance(_objectKeys[i]));
+            }
           } catch (Exception e) {
             throw new RuntimeException("Error on cast value");
           }
