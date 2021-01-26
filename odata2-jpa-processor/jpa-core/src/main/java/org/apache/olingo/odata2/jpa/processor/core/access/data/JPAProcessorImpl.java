@@ -48,6 +48,7 @@ import org.apache.olingo.odata2.jpa.processor.core.model.JPAEdmMappingImpl;
 
 import javax.persistence.*;
 import java.io.InputStream;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -599,8 +600,9 @@ public class JPAProcessorImpl implements JPAProcessor {
         em.clear();
 
         HashMap<String, Object> edmPropertyValueMap = jpaResultParser.parse2EdmPropertyValueMap(jpaEntity, edmEntityType);
-
-        for (EdmProperty key : findOriginalKeys((EdmEntityTypeImplProv) createView.getTargetEntitySet().getEntityType())) {
+        List<EdmProperty> originalKeys = findOriginalKeys((EdmEntityTypeImplProv) createView.getTargetEntitySet().getEntityType());
+        mapAllKeys(edmPropertyValueMap, originalKeys);
+        for (EdmProperty key : originalKeys) {
           final EdmSimpleType type = (EdmSimpleType) key.getType();
           final EdmFacets facets = key.getFacets();
           Object value = edmPropertyValueMap.get(key.getName());
@@ -634,6 +636,30 @@ public class JPAProcessorImpl implements JPAProcessor {
       throw new RuntimeException(e);
     }
     return null;
+  }
+
+  private void mapAllKeys(HashMap<String, Object> edmPropertyValueMap, List<EdmProperty> originalKeys ) throws EdmException {
+    if (edmPropertyValueMap.get("_objectKey") != null) {
+      String[] _objectKeys = edmPropertyValueMap.get("_objectKey").toString().split("~");
+      if (_objectKeys.length == originalKeys.size()) {
+        for (int  i = 0; i < originalKeys.size(); i++) {
+          try {
+            String keyName = originalKeys.get(i).getName();
+            Object objForKey = edmPropertyValueMap.get(keyName);
+            if (objForKey != null) {
+              Constructor<?> cons = objForKey.getClass().getConstructor(String.class);
+              edmPropertyValueMap.put(keyName, cons.newInstance(_objectKeys[i]));
+            }
+            else {
+              Constructor<?> cons = ((JPAEdmMappingImpl) originalKeys.get(i).getMapping()).getOriginaType().getConstructor(String.class);
+              edmPropertyValueMap.put(keyName, cons.newInstance(_objectKeys[i]));
+            }
+          } catch (Exception e) {
+            throw new RuntimeException("Error on cast value");
+          }
+        }
+      }
+    }
   }
 
   private <T> Object processUpdate(PutMergePatchUriInfo updateView,
