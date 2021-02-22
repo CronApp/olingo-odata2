@@ -189,7 +189,9 @@ public final class JPAEntityParser {
 
           Method method = accessModifierMap.get(propertyName);
           if (method == null && !hasCalc) {
-            String methodName = jpaEmbeddableKeyMap.get(jpaEntityAccessKey).get(propertyName);
+            String methodName = null;
+            if (jpaEmbeddableKeyMap.get(jpaEntityAccessKey) != null)
+              methodName = jpaEmbeddableKeyMap.get(jpaEntityAccessKey).get(propertyName);
             if (methodName != null) {
               boolean isVirtualAccess = false;
               if (property.getMapping() != null && property.getMapping() instanceof JPAEdmMappingImpl) {
@@ -200,6 +202,10 @@ public final class JPAEntityParser {
               } else {
                 propertyValue = getEmbeddablePropertyValue(methodName, propertyValue);
               }
+            }
+            else {
+              methodName = String.format("get%s", propertyName.substring(0,1).toUpperCase() + propertyName.substring(1));
+              propertyValue = getEmbeddablePropertyValue(methodName, propertyValue);
             }
           } else {
             propertyValue = getPropertyValue(accessModifierMap.get(propertyName), propertyValue, propertyName);
