@@ -48,6 +48,8 @@ import org.apache.olingo.odata2.jpa.processor.core.access.data.JPAQueryBuilder.J
 import org.apache.olingo.odata2.jpa.processor.core.model.JPAEdmMappingImpl;
 
 import javax.persistence.*;
+import javax.validation.ConstraintViolation;
+import javax.validation.ConstraintViolationException;
 import java.io.InputStream;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
@@ -57,6 +59,7 @@ import java.sql.Time;
 import java.sql.Timestamp;
 import java.util.*;
 import java.util.Map.Entry;
+import java.util.stream.Collectors;
 
 public class JPAProcessorImpl implements JPAProcessor {
 
@@ -814,6 +817,10 @@ public class JPAProcessorImpl implements JPAProcessor {
     } catch (PersistenceException e) {
       em.getTransaction().rollback();
       throw new RuntimeException(e);
+    } catch (ConstraintViolationException e) {
+      em.getTransaction().rollback();
+      String message = e.getConstraintViolations().stream().map(ConstraintViolation::getMessage).collect(Collectors.joining("\n"));
+      throw new RuntimeException(message, e);
     } catch (Exception e) {
       EntityTransaction et = em.getTransaction();
       if (et != null && et.isActive()) {
