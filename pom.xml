@@ -7,9 +7,10 @@
   <packaging>pom</packaging>
   <name>${project.artifactId}</name>
   <parent>
-    <groupId>org.apache</groupId>
-    <artifactId>apache</artifactId>
-    <version>13</version>
+    <groupId>io.cronapp</groupId>
+    <artifactId>cronapp-framework-spring</artifactId>
+    <version>2.8.0-SNAPSHOT</version>
+    <relativePath/>
   </parent>
   <inceptionYear>2013</inceptionYear>
   <licenses>
@@ -37,7 +38,7 @@
     <jax.ws.rs.version>2.0-m10</jax.ws.rs.version>
     <joda.version>2.1</joda.version>
     <cxf.version>2.7.10</cxf.version>
-    <jetty.version>7.5.4.v20111024</jetty.version>
+<!--    <jetty.version>7.5.4.v20111024</jetty.version>-->
     <httpclient.version>4.2.3</httpclient.version>
     <httpcore.version>4.2.3</httpcore.version>
     <slf4j.version>1.7.1</slf4j.version>
@@ -118,7 +119,7 @@
         <plugin>
           <groupId>org.apache.felix</groupId>
           <artifactId>maven-bundle-plugin</artifactId>
-          <version>2.3.7</version>
+          <version>5.1.1</version>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
@@ -179,25 +180,7 @@
           </execution>
         </executions>
       </plugin>
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>buildnumber-maven-plugin</artifactId>
-        <executions>
-          <execution>
-            <phase>validate</phase>
-            <goals>
-              <goal>create</goal>
-            </goals>
-          </execution>
-        </executions>
-        <configuration>
-          <doCheck>false</doCheck>
-          <doUpdate>false</doUpdate>
-          <getRevisionOnlyOnce>true</getRevisionOnlyOnce>
-          <revisionOnScmFailure>?</revisionOnScmFailure>
-          <timestampFormat>{0,date,yyyy-MM-dd'T'HH:mm:ssZ}</timestampFormat>
-        </configuration>
-      </plugin>
+
       <plugin>
         <artifactId>maven-remote-resources-plugin</artifactId>
         <executions>
